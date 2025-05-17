@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ReactNode } from "react";
+import { useState, useRef, ReactNode, KeyboardEvent } from "react";
 
 // 提示词模板接口
 export interface PromptTemplate {
@@ -14,6 +14,14 @@ export interface BracketOption {
   options: string[];
 }
 
+// 追踪已选择的选项信息
+interface SelectedOption {
+  type: string;
+  originalBracket: string; // 原始方括号内容，如 "[国家]"
+  selectedValue: string;   // 已选择的值，如 "中国"
+  position: {start: number; end: number};
+}
+
 // 组件属性接口
 export interface InteractivePromptProps {
   value: string;
@@ -23,6 +31,7 @@ export interface InteractivePromptProps {
   placeholder?: string;
   height?: string;
   className?: string;
+  useContentEditable?: boolean; // 是否使用contenteditable替代传统文本框
 }
 
 export default function InteractivePrompt({
@@ -32,7 +41,8 @@ export default function InteractivePrompt({
   bracketOptions,
   placeholder = "在这里输入您的问题或指令...",
   height = "12rem",
-  className = ""
+  className = "",
+  useContentEditable = false
 }: InteractivePromptProps) {
   const [isShowingOptions, setIsShowingOptions] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -40,8 +50,36 @@ export default function InteractivePrompt({
     type: string;
     position: {start: number; end: number};
     options: string[];
+    originalContent?: string; // 保存原始方括号内容
   } | null>(null);
+  // 跟踪所有已选择的选项
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editableRef = useRef<HTMLDivElement>(null);
+  
+  // 跟踪光标位置（用于contenteditable模式）
+  const [selectionRange, setSelectionRange] = useState<Range | null>(null);
+
+  // 保存选择范围
+  const saveSelection = () => {
+    if (document.getSelection && useContentEditable) {
+      const selection = document.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        setSelectionRange(selection.getRangeAt(0).cloneRange());
+      }
+    }
+  };
+
+  // 恢复选择范围
+  const restoreSelection = () => {
+    if (selectionRange && useContentEditable && editableRef.current) {
+      const selection = document.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(selectionRange);
+      }
+    }
+  };
 
   // 解析提示词中的方括号内容
   const parseBrackets = (text: string) => {
@@ -64,11 +102,19 @@ export default function InteractivePrompt({
   const applyTemplate = (template: string): void => {
     onChange(template);
     setSelectedTemplate("");
+    // 当应用新模板时清空已选项跟踪
+    setSelectedOptions([]);
   };
 
   // 清空提示词
   const clearPrompt = () => {
     onChange("");
+    setSelectedOptions([]);
+    if (useContentEditable && editableRef.current) {
+      editableRef.current.focus();
+    } else if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
   };
   
   // 处理方括号点击
@@ -77,7 +123,25 @@ export default function InteractivePrompt({
       setCurrentBracket({
         type: bracketOptions[bracketContent].type,
         position: {start: startPos, end: endPos},
-        options: bracketOptions[bracketContent].options
+        options: bracketOptions[bracketContent].options,
+        originalContent: bracketContent
+      });
+      setIsShowingOptions(true);
+    }
+  };
+
+  // 处理已选择选项的点击
+  const handleSelectedOptionClick = (selectedOption: SelectedOption) => {
+    // 此处的bracketKey是方括号内的内容，如 "国家"
+    const bracketKey = selectedOption.originalBracket.slice(1, -1);
+    
+    if (bracketOptions[bracketKey]) {
+      // 打开选项面板，重新选择
+      setCurrentBracket({
+        type: bracketOptions[bracketKey].type,
+        position: selectedOption.position,
+        options: bracketOptions[bracketKey].options,
+        originalContent: bracketKey
       });
       setIsShowingOptions(true);
     }
@@ -87,49 +151,138 @@ export default function InteractivePrompt({
   const handleOptionSelect = (option: string) => {
     if (currentBracket) {
       const { start, end } = currentBracket.position;
+      const originalBracket = currentBracket.originalContent ? 
+        `[${currentBracket.originalContent}]` : 
+        value.substring(start, end);
+      
       const newPrompt = value.substring(0, start) + 
                      option + 
                      value.substring(end);
+      
+      // 更新已选择选项列表
+      const updatedOptions = selectedOptions.filter(
+        item => !(item.position.start === start && item.position.end === end)
+      );
+      
+      updatedOptions.push({
+        type: currentBracket.type,
+        originalBracket: originalBracket,
+        selectedValue: option,
+        position: {
+          start: start,
+          end: start + option.length
+        }
+      });
+      
+      setSelectedOptions(updatedOptions);
       onChange(newPrompt);
       setIsShowingOptions(false);
       setCurrentBracket(null);
       
-      // 设置焦点回文本框
-      if (textareaRef.current) {
+      // 设置焦点回输入区域
+      if (useContentEditable && editableRef.current) {
+        setTimeout(() => {
+          editableRef.current?.focus();
+        }, 0);
+      } else if (textareaRef.current) {
         textareaRef.current.focus();
       }
     }
   };
 
+  // 处理contenteditable的输入变化
+  const handleContentEditableChange = () => {
+    if (editableRef.current) {
+      const content = editableRef.current.innerText;
+      // 文本变化后更新已选择选项的位置
+      // 这部分可能需要复杂的位置计算，目前简化处理：清空已选项
+      setSelectedOptions([]);
+      onChange(content);
+    }
+  };
+  
+  // 处理contenteditable的键盘事件
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // 如果按下Tab键，添加制表符而不是切换焦点
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      document.execCommand('insertText', false, '\t');
+    }
+    
+    saveSelection();
+  };
+
   // 渲染交互式提示词
   const renderInteractivePrompt = (): ReactNode => {
     const brackets = parseBrackets(value);
-    if (brackets.length === 0) return value;
-    
+    // 处理两种元素：原始方括号和已选择的值
     let lastIndex = 0;
     const elements = [];
     
-    brackets.forEach((bracket, index) => {
-      // 添加方括号前的文本
-      if (bracket.start > lastIndex) {
+    // 获取所有需要处理的位置点（包括方括号和已选择的值）
+    const allPositions = [
+      ...brackets.map(b => ({ 
+        isBracket: true, 
+        start: b.start, 
+        end: b.end, 
+        content: b.content 
+      })),
+      ...selectedOptions.map(so => ({ 
+        isBracket: false, 
+        start: so.position.start, 
+        end: so.position.end, 
+        content: so.selectedValue,
+        originalBracket: so.originalBracket,
+        type: so.type
+      }))
+    ].sort((a, b) => a.start - b.start);
+    
+    for (let i = 0; i < allPositions.length; i++) {
+      const pos = allPositions[i];
+      
+      // 如果当前元素与前一个元素重叠，跳过
+      if (i > 0 && pos.start < allPositions[i-1].end) continue;
+      
+      // 添加当前元素前的常规文本
+      if (pos.start > lastIndex) {
         elements.push(
-          <span key={`text-${index}`}>{value.substring(lastIndex, bracket.start)}</span>
+          <span key={`text-${i}-${lastIndex}`}>{value.substring(lastIndex, pos.start)}</span>
         );
       }
       
-      // 添加可点击的方括号
-      elements.push(
-        <span 
-          key={`bracket-${index}`}
-          className="text-blue-500 font-medium cursor-pointer hover:bg-blue-100 px-1 rounded"
-          onClick={() => handleBracketClick(bracket.content, bracket.start, bracket.end)}
-        >
-          [{bracket.content}]
-        </span>
-      );
+      if (pos.isBracket) {
+        // 渲染方括号元素
+        elements.push(
+          <span 
+            key={`bracket-${i}`}
+            className="text-blue-500 font-medium cursor-pointer hover:bg-blue-100 px-1 rounded"
+            onClick={() => handleBracketClick(pos.content, pos.start, pos.end)}
+          >
+            [{pos.content}]
+          </span>
+        );
+      } else {
+        // 渲染已选择的值
+        const selectedOpt = selectedOptions.find(
+          so => so.position.start === pos.start && so.position.end === pos.end
+        );
+        
+        if (selectedOpt) {
+          elements.push(
+            <span 
+              key={`selected-${i}`}
+              className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 px-1 rounded cursor-pointer hover:bg-green-200 dark:hover:bg-green-700"
+              onClick={() => handleSelectedOptionClick(selectedOpt)}
+              title={`点击重新选择${selectedOpt.type}`}
+            >
+              {selectedOpt.selectedValue}
+            </span>
+          );
+        }
+      }
       
-      lastIndex = bracket.end;
-    });
+      lastIndex = pos.end;
+    }
     
     // 添加最后一部分文本
     if (lastIndex < value.length) {
@@ -168,21 +321,46 @@ export default function InteractivePrompt({
         )}
       </div>
       
-      {/* 交互式预览区域 */}
+      {/* 交互式编辑区域 */}
       <div className="relative">
-        <div className="w-full p-3 border rounded-md mb-2 min-h-16 break-words dark:bg-gray-700 dark:border-gray-600">
-          {renderInteractivePrompt()}
-        </div>
-        
-        {/* 实际文本框 */}
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full p-3 border rounded-md resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          placeholder={placeholder}
-          style={{ height }}
-        />
+        {useContentEditable ? (
+          // 可编辑的交互式区域
+          <div
+            ref={editableRef}
+            contentEditable
+            onInput={handleContentEditableChange}
+            onKeyDown={handleKeyDown}
+            onBlur={saveSelection}
+            onFocus={restoreSelection}
+            className="w-full p-3 border rounded-md break-words dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 overflow-auto"
+            style={{ minHeight: "3rem", height, whiteSpace: "pre-wrap" }}
+            data-placeholder={placeholder}
+            suppressContentEditableWarning
+          >
+            {renderInteractivePrompt()}
+          </div>
+        ) : (
+          <>
+            {/* 传统模式：预览区域 + 文本框 */}
+            <div className="w-full p-3 border rounded-md mb-2 min-h-16 break-words dark:bg-gray-700 dark:border-gray-600">
+              {renderInteractivePrompt()}
+            </div>
+            
+            {/* 实际文本框 */}
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => {
+                onChange(e.target.value);
+                // 文本变化时清空已选择项跟踪（简化处理）
+                setSelectedOptions([]);
+              }}
+              className="w-full p-3 border rounded-md resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder={placeholder}
+              style={{ height }}
+            />
+          </>
+        )}
         
         {/* 选项弹窗 */}
         {isShowingOptions && currentBracket && (
@@ -224,8 +402,17 @@ export default function InteractivePrompt({
       </div>
       
       <div className="text-xs text-gray-500">
-        <p>提示：点击蓝色的[方括号]内容可以打开选项面板快速填写。</p>
+        <p>提示：点击蓝色的[方括号]内容可以选择选项，点击绿色高亮的已选项可以重新选择。</p>
       </div>
+      
+      {/* 添加用于显示空占位符的样式 */}
+      <style jsx global>{`
+        [contenteditable="true"]:empty:before {
+          content: attr(data-placeholder);
+          color: #9ca3af;
+          cursor: text;
+        }
+      `}</style>
     </div>
   );
 } 

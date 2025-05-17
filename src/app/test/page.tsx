@@ -220,6 +220,7 @@ export default function AITesting() {
                 templates={userProfileTemplates}
                 bracketOptions={userProfileOptions}
                 height="12rem"
+                useContentEditable={true}
               />
             </div>
             

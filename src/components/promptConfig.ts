@@ -1,4 +1,4 @@
-import { BracketOption, PromptTemplate } from "@/components/InteractivePrompt";
+import { BracketOption, PromptTemplate } from "./InteractivePrompt";
 
 /**
  * 用户画像分析相关配置

@@ -39,6 +39,7 @@ export default function PromptDemo() {
               bracketOptions={articleOptions}
               height="10rem"
               placeholder="输入您的文章创作需求，或从上方选择模板..."
+              useContentEditable={true}
             />
           </div>
           

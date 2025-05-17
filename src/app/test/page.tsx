@@ -4,18 +4,13 @@ import { useState, useEffect } from "react";
 import { createAIProvider, PROVIDER_CONFIGS } from "@/index";
 import { AIProvider, CompletionRequest, CompletionResponse, ProviderConfig } from "@/types";
 import Link from "next/link";
-
-// 提示词模板接口
-interface PromptTemplate {
-  name: string;
-  template: string;
-}
+import InteractivePrompt from "@/components/InteractivePrompt";
+import { userProfileOptions, userProfileTemplates } from "@/components/promptConfig";
 
 export default function AITesting() {
   const [selectedProvider, setSelectedProvider] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [promptTemplate, setPromptTemplate] = useState("");
   const [model, setModel] = useState("");
   const [availableModels, setAvailableModels] = useState<{id: string, name: string}[]>([]);
   const [response, setResponse] = useState<string>("");
@@ -24,42 +19,7 @@ export default function AITesting() {
   const [providers, setProviders] = useState<{id: string, name: string}[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [temperature, setTemperature] = useState(0.7);
-
-  // 预设提示词模板
-  const promptTemplates: PromptTemplate[] = [
-    { 
-      name: "通用对话", 
-      template: "你好，请回答我的问题：" 
-    },
-    { 
-      name: "知识问答", 
-      template: "请详细解释以下概念：" 
-    },
-    { 
-      name: "创意写作", 
-      template: "请基于以下主题创作一篇短文：" 
-    },
-    { 
-      name: "代码生成", 
-      template: "请用以下编程语言实现这个功能：\n\n功能描述：" 
-    },
-    { 
-      name: "翻译助手", 
-      template: "请将以下内容翻译成英文：" 
-    }
-  ];
-
-  // 应用模板
-  const applyTemplate = (template: string): void => {
-    setPrompt(template);
-    setPromptTemplate("");
-  };
-
-  // 清空提示词
-  const clearPrompt = () => {
-    setPrompt("");
-  };
-
+  
   // 初始化提供商列表
   useEffect(() => {
     const providerList = Object.entries(PROVIDER_CONFIGS).map(([id, config]) => ({
@@ -253,55 +213,14 @@ export default function AITesting() {
             </div>
             
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium">提示词</label>
-                <div className="text-xs text-gray-500">{prompt.length} 个字符</div>
-              </div>
-              
-              <div className="mb-2">
-                <select
-                  value={promptTemplate}
-                  onChange={(e) => {
-                    const selected = e.target.value;
-                    if (selected) {
-                      const template = promptTemplates.find(t => t.name === selected);
-                      if (template) applyTemplate(template.template);
-                    }
-                    setPromptTemplate(selected);
-                  }}
-                  className="w-full p-2 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                >
-                  <option value="">选择提示词模板...</option>
-                  {promptTemplates.map(t => (
-                    <option key={t.name} value={t.name}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="relative">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full p-3 border rounded-md h-48 resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="在这里输入您的问题或指令..."
-                  required
-                />
-                
-                <div className="absolute bottom-3 right-3 flex space-x-2">
-                  <button
-                    type="button"
-                    onClick={clearPrompt}
-                    className="p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 text-xs"
-                    title="清空提示词"
-                  >
-                    清空
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mt-2 text-xs text-gray-500">
-                <p>提示：优质的提示词能获得更好的回答。尝试详细描述您的需求。</p>
-              </div>
+              <label className="block mb-2 text-sm font-medium">提示词</label>
+              <InteractivePrompt
+                value={prompt}
+                onChange={setPrompt}
+                templates={userProfileTemplates}
+                bracketOptions={userProfileOptions}
+                height="12rem"
+              />
             </div>
             
             <button
@@ -347,7 +266,7 @@ export default function AITesting() {
           <li>选择要使用的模型</li>
           <li>调整温度参数（值越高，回答越随机创意；值越低，回答越确定）</li>
           <li>可选择是否启用流式响应（打字机效果）</li>
-          <li>输入提示词</li>
+          <li>输入提示词或使用模板，点击方括号内容可选择预设选项</li>
           <li>点击发送按钮获取响应</li>
         </ol>
         

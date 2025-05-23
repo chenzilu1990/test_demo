@@ -37,7 +37,7 @@ export default function MultiSceneDemo() {
             bracketOptions={allBracketOptions}
             height="10rem"
             placeholder="从下拉菜单选择任意场景的模板，包括用户画像和文章创作..."
-            useContentEditable={true}
+            useContentEditable={false}
           />
         </div>
         

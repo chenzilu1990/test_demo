@@ -340,12 +340,24 @@ export default function InteractivePrompt({
   // 修改contenteditable的输入变化处理函数
   const handleContentEditableChange = () => {
     if (editableRef.current) {
+      // 保存当前光标位置信息
+      const selection = document.getSelection();
+      const cursorOffset = selection?.focusOffset || 0;
+      const cursorNode = selection?.focusNode;
+      
       const oldText = prevValueRef.current;
       const newText = editableRef.current.innerText;
       
       // 只有当文本真正改变时才进行处理
       if (oldText !== newText) {
-        // 计算文本变化映射
+        const changeRatio = calculateChangeRatio(oldText, newText); // Implement this
+        if (changeRatio > 0.8) { // e.g., if more than 80% changed
+          setSelectedOptions([]); // Reset selected options
+          onChange(newText);
+          prevValueRef.current = newText;
+          return;
+        }
+        // Proceed with normal diffing
         const offsetMap = computeTextDiff(oldText, newText);
         
         // 更新选中的选项位置
@@ -357,14 +369,19 @@ export default function InteractivePrompt({
             // 如果能够找到映射位置，则更新选项
             if (startPos !== undefined && startPos !== -1 && 
                 endPos !== undefined && endPos !== -1) {
-              // 验证映射后的位置是否合理
-              if (startPos < endPos && 
-                  startPos >= 0 && 
-                  endPos <= newText.length &&
-                  // 确认映射后的内容与原选项值匹配
-                  newText.substring(startPos, endPos) === option.selectedValue) {
+              const newContent = newText.substring(startPos, endPos);
+              if (newContent === option.selectedValue) {
                 return {
                   ...option,
+                  position: {
+                    start: startPos,
+                    end: endPos
+                  }
+                };
+              } else if (newContent.length > 0 && newContent !== option.selectedValue) {
+                return {
+                  ...option,
+                  selectedValue: newContent,
                   position: {
                     start: startPos,
                     end: endPos
@@ -381,6 +398,21 @@ export default function InteractivePrompt({
         onChange(newText);
         prevValueRef.current = newText;
       }
+      
+      // 更智能地恢复光标位置，考虑到内容可能已经变化
+      setTimeout(() => {
+        if (cursorNode && editableRef.current?.contains(cursorNode)) {
+          try {
+            const range = document.createRange();
+            range.setStart(cursorNode, Math.min(cursorOffset, cursorNode.textContent?.length || 0));
+            range.collapse(true);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          } catch (e) {
+            console.warn("光标位置恢复失败", e);
+          }
+        }
+      }, 0);
     }
   };
   
@@ -434,7 +466,7 @@ export default function InteractivePrompt({
     }
   };
   
-  // 处理contenteditable的键盘事件
+  // 监听更多编辑相关事件
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // 如果按下Tab键，添加制表符而不是切换焦点
     if (e.key === 'Tab') {
@@ -442,8 +474,54 @@ export default function InteractivePrompt({
       document.execCommand('insertText', false, '\t');
     }
     
+    // 保存当前状态，用于检测重大变更
+    const beforeEditContent = editableRef.current?.innerText || '';
+
+    // 处理删除/退格键，可能需要特殊处理选项边界情况
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const selection = document.getSelection();
+      
+      // 检查是否有选区，或者光标是否在选项边界
+      if (selection && !selection.isCollapsed) {
+        // 检查选区是否跨越了选项
+        const range = selection.getRangeAt(0);
+        const selectedText = range.toString();
+        
+        // 这里可以添加逻辑来处理跨越选项边界的删除操作
+        // 例如，识别选区内的选项并更新其状态
+      }
+    }
+    
+    // 处理剪切/粘贴快捷键
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'v')) {
+      // 在下一个事件循环中检查内容变化
+      setTimeout(() => {
+        const afterEditContent = editableRef.current?.innerText || '';
+        if (beforeEditContent !== afterEditContent) {
+          // 触发差异计算和选项状态更新
+          handleContentEditableChange();
+        }
+      }, 0);
+    }
+    
     saveSelection();
   };
+
+  // 添加剪切/粘贴事件监听
+  useEffect(() => {
+    const editable = editableRef.current;
+    if (editable && useContentEditable) {
+      const handlePaste = () => {
+        // 在粘贴后的下一个事件循环中处理
+        setTimeout(handleContentEditableChange, 0);
+      };
+      
+      editable.addEventListener('paste', handlePaste);
+      return () => {
+        editable.removeEventListener('paste', handlePaste);
+      };
+    }
+  }, [useContentEditable]);
 
   // 渲染交互式提示词
   const renderInteractivePrompt = (): ReactNode => {

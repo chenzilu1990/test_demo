@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createAIProvider, PROVIDER_CONFIGS } from "@/index";
-import { AIProvider, CompletionRequest, CompletionResponse, ProviderConfig } from "@/types";
+import { AIProvider, CompletionRequest, CompletionResponse, ProviderConfig } from "@/index";
 import Link from "next/link";
 import InteractivePrompt from "@/components/InteractivePrompt";
 import { userProfileOptions, userProfileTemplates } from "@/components/promptConfig";

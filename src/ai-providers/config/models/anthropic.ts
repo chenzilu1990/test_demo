@@ -2,8 +2,8 @@ import { ModelCard } from '../../types';
 
 const anthropicModels: ModelCard[] = [
   {
-    id: 'claude-3-opus-20240229',
-    name: 'Claude 3 Opus',
+    id: 'claude-3-5-sonnet-20241022',
+    name: 'claude-3-5-sonnet-20241022',
     description: 'Anthropic最高能力模型，专为复杂任务设计',
     capabilities: {
       contextWindowTokens: 200000,

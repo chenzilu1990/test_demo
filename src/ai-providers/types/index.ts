@@ -26,6 +26,8 @@ export interface ProviderConfig {
     official?: string;
     apiDocs?: string;
     pricing?: string;
+    apiKeyUrl?: string;
+    status?: string;
   };
   sdkType: 'openai' | 'anthropic' | 'gemini' | 'custom';
   defaultHeaders?: Record<string, string>;
@@ -33,6 +35,7 @@ export interface ProviderConfig {
     streaming?: boolean;
     batchRequests?: boolean;
   };
+  description?: string;
 }
 
 export type ProviderOptions = {
@@ -93,4 +96,7 @@ export interface AIProvider {
   
   // 工具方法
   validateRequest(request: CompletionRequest): boolean;
+  
+  // 连接测试方法
+  testConnection(model?: string): Promise<boolean>;
 }

@@ -2,8 +2,8 @@ import { ModelCard } from '../../types';
 
 const siliconflowModels: ModelCard[] = [
   {
-    id: 'deepseek-coder',
-    name: 'Deepseek Coder',
+    id: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+    name: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
     description: 'SiliconFlow的Deepseek Coder模型，专为代码生成与理解优化',
     capabilities: {
       contextWindowTokens: 16000,

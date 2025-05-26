@@ -132,4 +132,81 @@ export class SiliconFlowProvider extends BaseProvider {
       reader.releaseLock();
     }
   }
+
+  // SiliconFlow特定的连接测试方法
+  public async testConnection(model?: string): Promise<boolean> {
+    try {
+      // 检查API密钥
+      if (!this.options.apiKey) {
+        throw new Error('API密钥未配置');
+      }
+
+      // 使用指定模型或第一个可用模型
+      const testModel = model || this.config.models[0]?.id;
+      if (!testModel) {
+        throw new Error('未找到可用的模型进行测试');
+      }
+
+      console.log(`Testing SiliconFlow connection with model ${testModel}...`);
+
+      // SiliconFlow使用OpenAI兼容格式的测试请求
+      const testRequest = {
+        model: testModel,
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello'
+          }
+        ],
+        max_tokens: 1,
+        temperature: 0,
+        stream: false
+      };
+
+      const url = `${this.options.baseURL}/chat/completions`;
+      const response = await this.fetchWithRetry(url, {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify(testRequest),
+      });
+
+      const data = await response.json();
+      
+      // 检查OpenAI兼容的响应格式
+      if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
+        console.log(`✅ SiliconFlow连接测试成功`);
+        return true;
+      } else if (data.error) {
+        throw new Error(data.error.message || 'SiliconFlow API返回错误');
+      } else {
+        throw new Error('SiliconFlow API返回了无效的响应格式');
+      }
+      
+    } catch (error: any) {
+      console.error(`❌ SiliconFlow连接测试失败:`, error.message);
+      
+      // SiliconFlow特定的错误消息处理
+      let errorMessage = error.message;
+      
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        errorMessage = 'SiliconFlow API密钥无效，请检查API密钥是否正确';
+      } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+        errorMessage = 'SiliconFlow API密钥权限不足或账户余额不足，请检查账户状态';
+      } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+        errorMessage = 'SiliconFlow请求频率过高，请稍后再试或升级您的API计划';
+      } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorMessage = 'SiliconFlow请求格式错误，请检查API配置';
+      } else if (error.message.includes('model') && error.message.includes('not found')) {
+        errorMessage = `模型 ${model || this.config.models[0]?.id} 在SiliconFlow中不可用或已下线`;
+      } else if (error.message.includes('Service Unavailable')) {
+        errorMessage = 'SiliconFlow服务暂时不可用，请稍后重试';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'SiliconFlow连接超时，请检查网络连接';
+      } else if (error.message.includes('ENOTFOUND') || error.message.includes('network')) {
+        errorMessage = '无法连接到SiliconFlow服务，请检查网络连接';
+      }
+      
+      throw new Error(errorMessage);
+    }
+  }
 } 

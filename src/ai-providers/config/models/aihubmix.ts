@@ -3,8 +3,8 @@ import { ModelCard } from '../../types';
 const aihubmixModels: ModelCard[] = [
   // OpenAI兼容模型
   {
-    id: 'gpt-4o',
-    name: 'GPT-4o',
+    id: 'gpt-4.1-nano',
+    name: 'gpt-4.1-nano',
     description: 'OpenAI的最新多模态模型，支持视觉和文本输入，高性能通用AI助手',
     capabilities: {
       contextWindowTokens: 128000,

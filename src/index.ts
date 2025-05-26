@@ -1,10 +1,10 @@
-import { PROVIDER_CONFIGS } from './config/providers';
-import { createProvider, createOpenAICompatibleProvider } from './core/providerFactory';
-import { BaseProvider } from './core/BaseProvider';
-import { AIProvider, ProviderConfig, ProviderOptions, CompletionRequest, CompletionResponse } from './types';
+import { PROVIDER_CONFIGS } from './ai-providers/config/providers';
+import { createProvider, createOpenAICompatibleProvider } from './ai-providers/core/providerFactory';
+import { BaseProvider } from './ai-providers/core/BaseProvider';
+import { AIProvider, ProviderConfig, ProviderOptions, CompletionRequest, CompletionResponse } from './ai-providers/types';
 
 // 导出所有类型和接口
-export * from './types';
+export * from './ai-providers/types';
 
 // 导出核心类和工厂函数
 export {
@@ -15,12 +15,12 @@ export {
 };
 
 // 导出各服务商实现
-export { OpenAIProvider } from './providers/openai';
-export { AnthropicProvider } from './providers/anthropic';
-export { AihubmixProvider } from './providers/aihubmix';
-export { GeminiProvider } from './providers/gemini';
-export { OllamaProvider } from './providers/ollama';
-export { SiliconFlowProvider } from './providers/siliconflow';
+export { OpenAIProvider } from './ai-providers/providers/openai';
+export { AnthropicProvider } from './ai-providers/providers/anthropic';
+export { AihubmixProvider } from './ai-providers/providers/aihubmix';
+export { GeminiProvider } from './ai-providers/providers/gemini';
+export { OllamaProvider } from './ai-providers/providers/ollama';
+export { SiliconFlowProvider } from './ai-providers/providers/siliconflow';
 
 // 创建一个实例的便捷函数
 export function createAIProvider(providerId: string, options: ProviderOptions = {}): AIProvider {

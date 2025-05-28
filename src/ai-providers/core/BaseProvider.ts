@@ -1,4 +1,38 @@
-import { AIProvider, ProviderConfig, ModelCard, CompletionRequest, CompletionResponse, ProviderOptions } from '../types';
+import { AIProvider, ProviderConfig, ModelCard, CompletionRequest, CompletionResponse, ProviderOptions, AIProviderError } from '../types';
+import { ValidationUtils } from './validation';
+
+// 添加错误代码枚举
+export enum ErrorCode {
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
+  RATE_LIMIT = 'RATE_LIMIT',
+  TIMEOUT = 'TIMEOUT',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  BAD_REQUEST = 'BAD_REQUEST',
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+  MODEL_NOT_FOUND = 'MODEL_NOT_FOUND',
+  INSUFFICIENT_QUOTA = 'INSUFFICIENT_QUOTA',
+  API_KEY_MISSING = 'API_KEY_MISSING',
+  UNKNOWN = 'UNKNOWN'
+}
+
+// 创建自定义错误类
+export class ProviderError extends Error implements AIProviderError {
+  code: string;
+  status?: number;
+  provider?: string;
+  details?: any;
+
+  constructor(message: string, code: string = ErrorCode.UNKNOWN, status?: number, provider?: string, details?: any) {
+    super(message);
+    this.name = 'ProviderError';
+    this.code = code;
+    this.status = status;
+    this.provider = provider;
+    this.details = details;
+  }
+}
 
 export abstract class BaseProvider implements AIProvider {
   public id: string;
@@ -30,27 +64,18 @@ export abstract class BaseProvider implements AIProvider {
   }
 
   public getModelById(modelId: string): ModelCard | undefined {
-    console.log(this.config.models);
     return this.config.models.find(model => model.id === modelId);
   }
 
   public validateRequest(request: CompletionRequest): boolean {
     const model = this.getModelById(request.model);
-    if (!model) {
-      console.error(`模型不存在 [${this.id}]: ${request.model}`);
+    const errors = ValidationUtils.validateRequestParams(request, model);
+    
+    if (errors.length > 0) {
+      console.error(`请求验证失败 [${this.id}]:`, errors.join(', '));
       return false;
     }
     
-    if (request.tools && request.tools.length > 0 && !model.capabilities.functionCall) {
-      console.error(`模型不支持工具调用 [${this.id}]: ${request.model}`);
-      return false;
-    }
-    
-    if (request.temperature && model.maxTemperature && request.temperature > model.maxTemperature) {
-      console.error(`温度超出范围 [${this.id}]: ${request.model}`);
-      return false;
-    }
-
     return true;
   }
 
@@ -95,45 +120,109 @@ export abstract class BaseProvider implements AIProvider {
   protected getDetailedErrorMessage(error: any): string {
     const message = error.message || error.toString();
     
+    // 解析错误并返回ProviderError
+    const errorInfo = this.parseError(error);
+    return errorInfo.message;
+  }
+
+  // 新增：解析错误并返回结构化的错误信息
+  protected parseError(error: any): ProviderError {
+    const message = error.message || error.toString();
+    const status = error.status || error.response?.status;
+    
     // 常见错误类型的处理
-    if (message.includes('401') || message.includes('Unauthorized')) {
-      return 'API密钥无效或已过期，请检查密钥是否正确';
+    if (status === 401 || message.includes('401') || message.includes('Unauthorized')) {
+      return new ProviderError(
+        'API密钥无效或已过期，请检查密钥是否正确',
+        ErrorCode.UNAUTHORIZED,
+        401,
+        this.id
+      );
     }
     
-    if (message.includes('403') || message.includes('Forbidden')) {
-      return 'API密钥权限不足或账户余额不足，请检查账户状态';
+    if (status === 403 || message.includes('403') || message.includes('Forbidden')) {
+      return new ProviderError(
+        'API密钥权限不足或账户余额不足，请检查账户状态',
+        ErrorCode.FORBIDDEN,
+        403,
+        this.id
+      );
     }
     
-    if (message.includes('429') || message.includes('rate limit')) {
-      return '请求频率过高，请稍后再试或升级您的API计划';
+    if (status === 429 || message.includes('429') || message.includes('rate limit')) {
+      return new ProviderError(
+        '请求频率过高，请稍后再试或升级您的API计划',
+        ErrorCode.RATE_LIMIT,
+        429,
+        this.id
+      );
     }
     
     if (message.includes('timeout') || message.includes('TIMEOUT')) {
-      return '连接超时，请检查网络连接或尝试使用代理';
+      return new ProviderError(
+        '连接超时，请检查网络连接或尝试使用代理',
+        ErrorCode.TIMEOUT,
+        undefined,
+        this.id
+      );
     }
     
     if (message.includes('ENOTFOUND') || message.includes('network') || message.includes('DNS')) {
-      return '网络连接失败，请检查网络设置或防火墙配置';
+      return new ProviderError(
+        '网络连接失败，请检查网络设置或防火墙配置',
+        ErrorCode.NETWORK_ERROR,
+        undefined,
+        this.id
+      );
     }
     
-    if (message.includes('Invalid request') || message.includes('Bad Request')) {
-      return '请求格式错误，请检查API配置是否正确';
+    if (status === 400 || message.includes('Invalid request') || message.includes('Bad Request')) {
+      return new ProviderError(
+        '请求格式错误，请检查API配置是否正确',
+        ErrorCode.BAD_REQUEST,
+        400,
+        this.id
+      );
     }
     
-    if (message.includes('Service Unavailable') || message.includes('502') || message.includes('503')) {
-      return '服务暂时不可用，请稍后重试';
+    if (status === 503 || status === 502 || message.includes('Service Unavailable') || message.includes('502') || message.includes('503')) {
+      return new ProviderError(
+        '服务暂时不可用，请稍后重试',
+        ErrorCode.SERVICE_UNAVAILABLE,
+        status || 503,
+        this.id
+      );
     }
     
-    if (message.includes('Internal Server Error') || message.includes('500')) {
-      return '服务器内部错误，请稍后重试';
+    if (status === 500 || message.includes('Internal Server Error') || message.includes('500')) {
+      return new ProviderError(
+        '服务器内部错误，请稍后重试',
+        ErrorCode.INTERNAL_ERROR,
+        500,
+        this.id
+      );
     }
 
     if (message.includes('model') && message.includes('not found')) {
-      return '指定的模型不存在或不可用，请检查模型名称';
+      return new ProviderError(
+        '指定的模型不存在或不可用，请检查模型名称',
+        ErrorCode.MODEL_NOT_FOUND,
+        404,
+        this.id
+      );
+    }
+
+    if (message.includes('insufficient_quota')) {
+      return new ProviderError(
+        '账户配额不足，请检查账户余额或升级计划',
+        ErrorCode.INSUFFICIENT_QUOTA,
+        402,
+        this.id
+      );
     }
 
     // 返回原始错误消息
-    return message;
+    return new ProviderError(message, ErrorCode.UNKNOWN, status, this.id, error);
   }
 
   protected buildHeaders(): HeadersInit {
@@ -145,15 +234,18 @@ export abstract class BaseProvider implements AIProvider {
     if (this.options.apiKey && this.config.authType === 'key') {
       headers['Authorization'] = `Bearer ${this.options.apiKey}`;
     }
-    console.log(headers);
     return headers;
   }
 
-  protected async fetchWithRetry(url: string, options: RequestInit, retries = 3): Promise<Response> {
+  protected async fetchWithRetry(url: string, options: RequestInit, retries?: number): Promise<Response> {
     const fetch = this.options.fetch || globalThis.fetch;
+    const maxRetries = retries ?? this.options.retry?.maxRetries ?? 3;
+    const retryDelay = this.options.retry?.retryDelay ?? 1000;
+    const retryOn = this.options.retry?.retryOn ?? [429, 502, 503, 504];
+    const exponentialBackoff = this.options.retry?.exponentialBackoff ?? true;
     
     let lastError: Error;
-    for (let i = 0; i < retries; i++) {
+    for (let i = 0; i < maxRetries; i++) {
       try {
         const response = await fetch(url, {
           ...options,
@@ -165,26 +257,57 @@ export abstract class BaseProvider implements AIProvider {
           return response;
         }
         
-        if (response.status === 429) {
-          // Rate limit - wait and retry
-          const retryAfter = response.headers.get('Retry-After');
-          const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : 1000 * (i + 1);
+        // 检查是否应该重试
+        if (retryOn.includes(response.status)) {
+          // Rate limit - 使用服务器提供的重试延迟
+          if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After');
+            const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : 
+                         exponentialBackoff ? retryDelay * Math.pow(2, i) : retryDelay;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          
+          // 其他可重试的错误
+          const delay = exponentialBackoff ? retryDelay * Math.pow(2, i) : retryDelay;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
-        } 
-        else if (response.status === 404) {
-          throw new Error('API地址不存在，请检查API地址是否正确');
         }
         
-        throw new Error(`Request failed with status ${response.status}: ${await response.text()}`);
+        // 不可重试的错误
+        if (response.status === 404) {
+          throw new ProviderError(
+            'API地址不存在，请检查API地址是否正确',
+            ErrorCode.BAD_REQUEST,
+            404,
+            this.id
+          );
+        }
+        
+        const errorText = await response.text();
+        throw new ProviderError(
+          `请求失败: ${errorText}`,
+          ErrorCode.UNKNOWN,
+          response.status,
+          this.id,
+          { response: errorText }
+        );
       } catch (err) {
         lastError = err as Error;
-        if (i === retries - 1) {
-          throw lastError;
+        
+        // 如果是最后一次重试，直接抛出错误
+        if (i === maxRetries - 1) {
+          // 如果是ProviderError，直接抛出
+          if (lastError instanceof ProviderError) {
+            throw lastError;
+          }
+          // 否则解析错误
+          throw this.parseError(lastError);
         }
         
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+        // 网络错误也需要重试
+        const delay = exponentialBackoff ? retryDelay * Math.pow(2, i) : retryDelay;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
     

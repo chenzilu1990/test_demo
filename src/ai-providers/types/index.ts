@@ -46,6 +46,12 @@ export type ProviderOptions = {
   timeout?: number;
   headers?: Record<string, string>;
   fetch?: typeof fetch;
+  retry?: {
+    maxRetries?: number;
+    retryDelay?: number;
+    retryOn?: number[];
+    exponentialBackoff?: boolean;
+  };
 };
 
 export type ChatMessage = {
@@ -99,4 +105,95 @@ export interface AIProvider {
   
   // 连接测试方法
   testConnection(model?: string): Promise<boolean>;
+}
+
+// 添加错误类型定义
+export interface AIProviderError extends Error {
+  code?: string;
+  status?: number;
+  provider?: string;
+  details?: any;
+}
+
+// 添加流式响应类型
+export interface StreamChunk {
+  id?: string;
+  object?: string;
+  created?: number;
+  model?: string;
+  choices?: Array<{
+    index: number;
+    delta: {
+      role?: string;
+      content?: string;
+      tool_calls?: any[];
+    };
+    finish_reason?: string | null;
+  }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+}
+
+// 添加提供商状态类型
+export type ProviderStatus = 'unconfigured' | 'testing' | 'connected' | 'error';
+
+// 添加测试结果类型
+export interface TestConnectionResult {
+  success: boolean;
+  message?: string;
+  error?: AIProviderError;
+  timestamp: Date;
+  model?: string;
+}
+
+// 添加性能监控类型
+export interface PerformanceMetrics {
+  requestId: string;
+  provider: string;
+  model: string;
+  startTime: Date;
+  endTime?: Date;
+  duration?: number;
+  tokensUsed?: {
+    prompt: number;
+    completion: number;
+    total: number;
+  };
+  status: 'success' | 'error' | 'timeout';
+  error?: string;
+}
+
+export interface PerformanceMonitor {
+  startRequest(provider: string, model: string): string;
+  endRequest(requestId: string, status: 'success' | 'error' | 'timeout', tokensUsed?: any, error?: string): void;
+  getMetrics(provider?: string, model?: string): PerformanceMetrics[];
+  clearMetrics(): void;
+}
+
+// 添加缓存机制类型
+export interface CacheEntry {
+  key: string;
+  value: CompletionResponse;
+  timestamp: Date;
+  ttl: number;
+  hits: number;
+}
+
+export interface CacheOptions {
+  enabled: boolean;
+  ttl?: number; // 缓存过期时间（毫秒）
+  maxSize?: number; // 最大缓存条目数
+  keyGenerator?: (request: CompletionRequest) => string;
+}
+
+export interface Cache {
+  get(key: string): CacheEntry | null;
+  set(key: string, value: CompletionResponse, ttl?: number): void;
+  has(key: string): boolean;
+  delete(key: string): boolean;
+  clear(): void;
+  size(): number;
 }

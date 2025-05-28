@@ -1,10 +1,10 @@
 import { ProviderConfig } from '../types';
-import openAIModels from './models/openai';
-import anthropicModels from './models/anthropic';
-import geminiModels from './models/gemini';
-import ollamaModels from './models/ollama';
-import aihubmixModels from './models/aihubmix';
-import siliconflowModels from './models/siliconflow';
+import openAIModels from './models/openai-models';
+import anthropicModels from './models/anthropic-models';
+import geminiModels from './models/gemini-models';
+import ollamaModels from './models/ollama-models';
+import aihubmixModels from './models/aihubmix-models';
+import siliconflowModels from './models/siliconflow-models';
 
 export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   openai: {
@@ -20,7 +20,6 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
       pricing: 'https://openai.com/pricing',
       apiKeyUrl: 'https://platform.openai.com/api-keys',
       status: 'https://status.openai.com',
-      // apiKey: 'sk-proj-1234567890',
     },
     capabilities: {
       streaming: true,

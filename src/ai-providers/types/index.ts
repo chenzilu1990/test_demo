@@ -4,6 +4,7 @@ export interface ModelCapabilities {
   vision?: boolean;
   reasoning?: boolean;
   json?: boolean;
+  imageGeneration?: boolean;
 }
 
 export interface ModelCard {
@@ -88,6 +89,25 @@ export type CompletionResponse = {
   };
 };
 
+export interface ImageGenerationRequest {
+  prompt: string;
+  model: string;
+  n?: number;
+  size?: '256x256' | '512x512' | '1024x1024' | '1024x1792' | '1792x1024';
+  quality?: 'standard' | 'hd';
+  style?: 'vivid' | 'natural';
+  response_format?: 'url' | 'b64_json';
+}
+
+export interface ImageGenerationResponse {
+  created: number;
+  data: Array<{
+    url?: string;
+    b64_json?: string;
+    revised_prompt?: string;
+  }>;
+}
+
 export interface AIProvider {
   id: string;
   config: ProviderConfig;
@@ -95,6 +115,9 @@ export interface AIProvider {
   // 核心方法
   chat(request: CompletionRequest): Promise<CompletionResponse>;
   chatStream(request: CompletionRequest): AsyncIterable<any>;
+  
+  // 图像生成方法
+  generateImage?(request: ImageGenerationRequest): Promise<ImageGenerationResponse>;
   
   // 元数据方法
   getModels(): Promise<ModelCard[]>;

@@ -42,6 +42,13 @@ export default function Home() {
           </Link>
           
           <Link
+            className="rounded-full border border-solid border-blue-600 transition-colors flex items-center justify-center bg-blue-600 text-white gap-2 hover:bg-blue-700 dark:hover:bg-blue-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
+            href="/ai-providers-chat"
+          >
+            💬 AI 对话测试 (支持DALL-E)
+          </Link>
+          
+          <Link
             className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
             href="/prompt-demo"
           >

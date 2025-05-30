@@ -75,7 +75,7 @@ export abstract class BaseProvider implements AIProvider {
       console.error(`请求验证失败 [${this.id}]:`, errors.join(', '));
       return false;
     }
-    
+
     return true;
   }
 
@@ -129,8 +129,9 @@ export abstract class BaseProvider implements AIProvider {
   protected parseError(error: any): ProviderError {
     const message = error.message || error.toString();
     const status = error.status || error.response?.status;
-    
-    // 常见错误类型的处理
+    const details = error.details;
+
+    // 常见错误类型的处理 (如果上面没有匹配到 OpenAI 特定错误)
     if (status === 401 || message.includes('401') || message.includes('Unauthorized')) {
       return new ProviderError(
         'API密钥无效或已过期，请检查密钥是否正确',
@@ -178,7 +179,7 @@ export abstract class BaseProvider implements AIProvider {
     
     if (status === 400 || message.includes('Invalid request') || message.includes('Bad Request')) {
       return new ProviderError(
-        '请求格式错误，请检查API配置是否正确',
+        '请求格式错误，请检查API配置是否正确 $',
         ErrorCode.BAD_REQUEST,
         400,
         this.id
@@ -203,20 +204,11 @@ export abstract class BaseProvider implements AIProvider {
       );
     }
 
-    if (message.includes('model') && message.includes('not found')) {
-      return new ProviderError(
-        '指定的模型不存在或不可用，请检查模型名称',
-        ErrorCode.MODEL_NOT_FOUND,
-        404,
-        this.id
-      );
-    }
-
     if (message.includes('insufficient_quota')) {
       return new ProviderError(
         '账户配额不足，请检查账户余额或升级计划',
         ErrorCode.INSUFFICIENT_QUOTA,
-        402,
+        status || 402, // 通常 OpenAI 返回 429 for quota
         this.id
       );
     }
@@ -244,7 +236,13 @@ export abstract class BaseProvider implements AIProvider {
     const retryOn = this.options.retry?.retryOn ?? [429, 502, 503, 504];
     const exponentialBackoff = this.options.retry?.exponentialBackoff ?? true;
     
-    let lastError: Error;
+    let lastError: Error = new ProviderError(
+      'All fetch attempts failed or an unexpected error occurred during retries.',
+      ErrorCode.UNKNOWN,
+      undefined,
+      this.id
+    );
+
     for (let i = 0; i < maxRetries; i++) {
       try {
         const response = await fetch(url, {
@@ -256,12 +254,30 @@ export abstract class BaseProvider implements AIProvider {
         if (response.ok) {
           return response;
         }
+
+        // 如果是最后一次尝试，并且响应仍然是不可接受的，则立即处理并抛出这个错误
+        if (i === maxRetries - 1 && !response.ok) {
+          const errorText = await response.text();
+          let errorDetails: any = { response: errorText };
+          let errorMessage = `请求失败 (最后一次尝试): ${errorText}`;
+          try {
+            const parsedError = JSON.parse(errorText);
+            if (parsedError && parsedError.error) {
+              errorDetails = parsedError.error;
+              errorMessage = `请求失败 (最后一次尝试): ${parsedError.error.message || errorText}`;
+            }
+          } catch (e) { /* JSON 解析失败 */ }
+          // 使用 parseError 来确保错误代码和消息的一致性
+          throw this.parseError(new ProviderError(errorMessage, ErrorCode.UNKNOWN, response.status, this.id, errorDetails));
+        }
         
         // 检查是否应该重试
         if (retryOn.includes(response.status)) {
           // Rate limit - 使用服务器提供的重试延迟
-          if (response.status === 429) {
-            const retryAfter = response.headers.get('Retry-After');
+          console.log('[AI_PROVIDER_DEBUG] Rate limit - 使用服务器提供的重试延迟');
+          
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After');
             const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : 
                          exponentialBackoff ? retryDelay * Math.pow(2, i) : retryDelay;
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -272,7 +288,7 @@ export abstract class BaseProvider implements AIProvider {
           const delay = exponentialBackoff ? retryDelay * Math.pow(2, i) : retryDelay;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
-        }
+        } 
         
         // 不可重试的错误
         if (response.status === 404) {
@@ -285,24 +301,35 @@ export abstract class BaseProvider implements AIProvider {
         }
         
         const errorText = await response.text();
+        let errorDetails: any = { response: errorText };
+        let errorMessage = `请求失败: ${errorText}`;
+
+        try {
+          const parsedError = JSON.parse(errorText);
+          if (parsedError && parsedError.error) {
+            errorDetails = parsedError.error; // 将 OpenAI 的 error 对象作为 details
+            // 优先使用 parsedError.error.message 如果存在
+            errorMessage = `请求失败: ${parsedError.error.message || errorText}`;
+            // 如果有 OpenAI 的 code，可以考虑用它来构造更具体的 ProviderError code
+            // 例如: const errorCode = this.mapOpenAICodeToErrorCode(parsedError.error.code);
+          }
+        } catch (e) {
+          // JSON 解析失败，保持原有行为
+        }
+
         throw new ProviderError(
-          `请求失败: ${errorText}`,
-          ErrorCode.UNKNOWN,
+          errorMessage,
+          ErrorCode.UNKNOWN, // 稍后可以根据 parsedError.error.code 映射到更具体的 ErrorCode
           response.status,
           this.id,
-          { response: errorText }
+          errorDetails
         );
       } catch (err) {
         lastError = err as Error;
         
-        // 如果是最后一次重试，直接抛出错误
+        // 如果是最后一次重试 (通常是网络错误或 fetch 本身抛出的错误)，通过 parseError 处理
         if (i === maxRetries - 1) {
-          // 如果是ProviderError，直接抛出
-          if (lastError instanceof ProviderError) {
-            throw lastError;
-          }
-          // 否则解析错误
-          throw this.parseError(lastError);
+          throw this.parseError(lastError); 
         }
         
         // 网络错误也需要重试
@@ -313,4 +340,6 @@ export abstract class BaseProvider implements AIProvider {
     
     throw lastError!;
   }
+
+
 }

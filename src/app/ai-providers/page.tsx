@@ -469,12 +469,12 @@ export default function AIProvidersConfig() {
               >
                 🧪 测试工具
               </Link>
-              <Link 
-                href="/"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                ← 返回首页
-              </Link>
+            <Link 
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              ← 返回首页
+            </Link>
             </div>
           </div>
 

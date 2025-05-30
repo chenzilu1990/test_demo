@@ -17,9 +17,27 @@ const aihubmixModels: ModelCard[] = [
     maxTemperature: 2.0,
   },
   {
-    id: 'gpt-4-turbo',
-    name: 'GPT-4 Turbo',
-    description: '更快速的GPT-4版本，保持强大能力的同时提高响应速度',
+    id: 'dall-e-3',
+    name: 'DALL-E 3',
+    description: 'OpenAI 最新的图像生成模型，支持高质量图像生成',
+    capabilities: {
+      imageGeneration: true,
+    },
+    enabled: true,
+  },
+  {
+    id: 'gpt-image-1',
+    name: 'GPT-Image-1',
+    description: 'OpenAI 的图像生成模型，支持多种尺寸和风格',
+    capabilities: {
+      imageGeneration: true,
+    },
+    enabled: true,
+  },
+  {
+    id: 'gpt-4o',
+    name: 'GPT-4o',
+    description: 'OpenAI 的最新一代大模型，支持更强大的语言理解和生成能力',
     capabilities: {
       contextWindowTokens: 128000,
       functionCall: true,

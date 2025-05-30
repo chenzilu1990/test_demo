@@ -8,6 +8,7 @@ AI Providers模块现在支持通用的测试连接功能，可以验证API配�
 - ✅ **详细错误诊断** - 针对不同错误类型提供具体的解决建议
 - ✅ **提供商特定优化** - 每个提供商都有定制的测试逻辑
 - ✅ **模型验证** - 验证指定模型是否可用
+- ✅ **图像生成支持** - OpenAI Provider 现已支持 DALL-E 图像生成
 
 ## 基本用法
 
@@ -39,6 +40,39 @@ try {
   console.error('模型测试失败:', error.message);
 }
 ```
+
+## DALL-E 图像生成支持
+
+### 使用示例
+```typescript
+// 使用 DALL-E 生成图像
+if (provider.generateImage) {
+  const imageResponse = await provider.generateImage({
+    model: 'dall-e-3',
+    prompt: '一只可爱的猫咪坐在窗台上看夕阳',
+    size: '1024x1024',
+    quality: 'hd',
+    style: 'vivid',
+    n: 1,
+    response_format: 'url'
+  });
+  
+  // 获取生成的图像URL
+  const imageUrl = imageResponse.data[0].url;
+  console.log('生成的图像:', imageUrl);
+}
+```
+
+### 支持的参数
+- **model**: 'dall-e-2' 或 'dall-e-3'
+- **prompt**: 图像描述文本
+- **size**: 图像尺寸
+  - DALL-E 2: '256x256', '512x512', '1024x1024'
+  - DALL-E 3: '1024x1024', '1024x1792', '1792x1024'
+- **quality**: 'standard' 或 'hd' (仅 DALL-E 3)
+- **style**: 'vivid' 或 'natural' (仅 DALL-E 3)
+- **n**: 生成图像数量 (1-10)
+- **response_format**: 'url' 或 'b64_json'
 
 ## 各提供商特定功能
 

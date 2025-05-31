@@ -1,5 +1,5 @@
 import { BaseProvider } from '../core/BaseProvider';
-import { CompletionRequest, CompletionResponse, ProviderConfig, ProviderOptions } from '../types';
+  import { CompletionRequest, CompletionResponse, ProviderConfig, ProviderOptions, ImageGenerationRequest, ImageGenerationResponse } from '../types';
 import { OpenAIProvider } from './openai';
 import { AnthropicProvider } from './anthropic';
 import { GeminiProvider } from './gemini';
@@ -74,6 +74,18 @@ export class AihubmixProvider extends BaseProvider {
     
     // 将处理委托给选定的provider
     yield* this.currentProvider.chatStream(request);
+  }
+
+  async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+    // AiHubMix image generation uses an OpenAI-compatible endpoint.
+    // The openaiProvider is already configured with baseURL "https://aihubmix.com/v1".
+    // The request.model should typically be "gpt-image-1" as per AiHubMix docs,
+    // which should be set by the caller.
+    // This provider assumes the underlying openaiProvider has implemented generateImage.
+    if (!this.openaiProvider.generateImage) {
+      throw new Error('Image generation is not supported by the underlying OpenAI provider for AiHubMix.');
+    }
+    return this.openaiProvider.generateImage(request);
   }
 
   // 验证请求对于当前模型是否有效

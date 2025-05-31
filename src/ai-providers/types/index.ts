@@ -1,3 +1,5 @@
+import { ProviderError } from "../core/BaseProvider";
+
 export interface ModelCapabilities {
   contextWindowTokens?: number;
   functionCall?: boolean;
@@ -128,6 +130,7 @@ export interface AIProvider {
   
   // 连接测试方法
   testConnection(model?: string): Promise<boolean>;
+
 }
 
 // 添加错误类型定义

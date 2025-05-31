@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { createAIProvider, PROVIDER_CONFIGS } from "@/index";
 import { AIProvider, CompletionRequest, CompletionResponse, ProviderConfig } from "@/index";
 import Link from "next/link";
-import InteractivePrompt from "@/components/InteractivePrompt";
-import { userProfileOptions, userProfileTemplates } from "@/components/promptConfig";
+import InteractivePrompt from "@/components/prompt-editor/InteractivePrompt";
+import { userProfileOptions, userProfileTemplates } from "@/components/prompt-editor/promptConfig";
 
 export default function AITesting() {
   const [selectedProvider, setSelectedProvider] = useState("");

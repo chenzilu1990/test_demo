@@ -23,8 +23,8 @@
 
 import { useMemo } from 'react';
 import { InitialConfigType } from '@lexical/react/LexicalComposer';
-import { BracketNode } from '../../../nodes/BracketNode';
-import { SelectedValueNode } from '../../../nodes/SelectedValueNode';
+import { BracketNode } from '../nodes/BracketNode';
+import { SelectedValueNode } from '../nodes/SelectedValueNode';
 
 interface UseLexicalConfigOptions {
   /** 编辑器命名空间，默认为 'PromptEditor' */

@@ -21,8 +21,8 @@
 import { useEffect } from 'react';
 import { LexicalEditor, $getNearestNodeFromDOMNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { BracketNode, $isBracketNode } from '../../../nodes/BracketNode';
-import { SelectedValueNode, $isSelectedValueNode } from '../../../nodes/SelectedValueNode';
+import { BracketNode, $isBracketNode } from '../nodes/BracketNode';
+import { SelectedValueNode, $isSelectedValueNode } from '../nodes/SelectedValueNode';
 import { BracketOption } from '../../types';
 
 interface ClickHandlerPluginProps {

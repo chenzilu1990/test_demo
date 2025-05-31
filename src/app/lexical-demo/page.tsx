@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import LexicalPromptEditor from "@/components/lexical-editor/LexicalPromptEditor";
-import { BracketOption } from "@/components/types";
+import LexicalPromptEditor from "@/components/prompt-editor/lexical-editor/LexicalPromptEditor";
+import { BracketOption } from "@/components/prompt-editor/types";
 
 export default function LexicalDemo() {
   const [prompt, setPrompt] = useState("我的目标市场是[国家]，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");

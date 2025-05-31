@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import InteractivePrompt from "@/components/InteractivePrompt";
-import { articleOptions, articleTemplates } from "@/components/promptConfig";
+import InteractivePrompt from "@/components/prompt-editor/InteractivePrompt";
+import { articleOptions, articleTemplates } from "@/components/prompt-editor/promptConfig";
 
 export default function PromptDemo() {
   const [prompt, setPrompt] = useState("");

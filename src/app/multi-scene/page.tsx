@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import InteractivePrompt from "@/components/InteractivePrompt";
-import { allBracketOptions, allPromptTemplates } from "@/components/promptConfig";
+import InteractivePrompt from "@/components/prompt-editor/InteractivePrompt";
+import { allBracketOptions, allPromptTemplates } from "@/components/prompt-editor/promptConfig";
 
 export default function MultiSceneDemo() {
   const [prompt, setPrompt] = useState("");

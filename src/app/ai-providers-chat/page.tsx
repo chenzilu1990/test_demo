@@ -10,8 +10,8 @@ import {
   ImageGenerationRequest,
   ChatMessage 
 } from '@/ai-providers/types';
-import InteractivePrompt from '@/components/InteractivePrompt';
-import { BracketOption } from '@/components/types';
+import InteractivePrompt from '@/components/prompt-editor/InteractivePrompt';
+import { BracketOption } from '@/components/prompt-editor/types';
 
 interface ConversationMessage {
   id: string;
@@ -220,15 +220,35 @@ export default function AIChatPage() {
 
         const response = await provider.generateImage(imageRequest);
         
+        // 检查响应格式是否正确
+        if (!response || !response.data || !Array.isArray(response.data) || response.data.length === 0) {
+          throw new Error('图像生成API返回的数据格式无效');
+        }
+        
+        // 处理图像URL - 可能是url或base64数据
+        let imageUrl = '';
+        if (response.data[0].url) {
+          imageUrl = response.data[0].url;
+        } else if (response.data[0].b64_json) {
+          // 如果返回的是base64数据，转换为可显示的Data URL
+          imageUrl = `data:image/png;base64,${response.data[0].b64_json}`;
+        } else {
+          throw new Error('图像生成API没有返回有效的图像数据');
+        }
+        
         const assistantMessage: ConversationMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: response.data[0].revised_prompt || cleanPrompt,
-          imageUrl: response.data[0].url,
+          imageUrl: imageUrl,
           timestamp: new Date(),
           model: modelId
         };
 
+        // 添加调试日志
+        console.log('图像生成响应:', response);
+        console.log('获取到的图像URL:', imageUrl);
+        
         setConversation(prev => [...prev, assistantMessage]);
       } else {
         // 文本对话

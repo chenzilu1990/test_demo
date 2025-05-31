@@ -24,8 +24,8 @@
 
 import { useState, useCallback } from 'react';
 import { LexicalEditor, $setSelection, $createRangeSelection } from 'lexical';
-import { BracketNode, $isBracketNode } from '../../../nodes/BracketNode';
-import { SelectedValueNode, $createSelectedValueNode, $isSelectedValueNode } from '../../../nodes/SelectedValueNode';
+import { BracketNode, $isBracketNode } from '../nodes/BracketNode';
+import { SelectedValueNode, $createSelectedValueNode, $isSelectedValueNode } from '../nodes/SelectedValueNode';
 import { BracketOption } from '../../types';
 
 interface CurrentSelection {

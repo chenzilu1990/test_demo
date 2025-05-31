@@ -9,7 +9,7 @@ import TextareaPrompt from "./textarea-editor/TextareaPrompt";
 import { BracketOption, PromptTemplate, SelectedOption } from "./types";
 import { computeTextDiff } from "./textarea-editor/TextDiffUtils";
 // import LexicalPromptEditor from "./LexicalPromptEditor";
-import LexicalPromptEditor from "@/components/lexical-editor/LexicalPromptEditor";
+import LexicalPromptEditor from "./lexical-editor/LexicalPromptEditor";
 
 
 // 组件属性接口

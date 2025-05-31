@@ -286,32 +286,31 @@ export default function AIProvidersConfig() {
     }
   }, []);
 
-  // 保存配置到localStorage
-  const saveConfigurations = () => {
-    const configsToSave = providers.reduce((acc, provider) => {
-      acc[provider.id] = {
-        apiKey: provider.apiKey,
-        baseURL: provider.baseURL,
-        enabled: provider.enabled,
-        status: provider.status,
-        lastTested: provider.lastTested?.toISOString()
-      };
-      return acc;
-    }, {} as Record<string, any>);
-    
-    localStorage.setItem('ai-providers-config', JSON.stringify(configsToSave));
-  };
-
   // 更新提供商配置
   const updateProvider = (providerId: string, updates: Partial<ProviderConfigData>) => {
-    setProviders(prev => prev.map(p => 
-      p.id === providerId 
-        ? { ...p, ...updates }
-        : p
-    ));
-    
-    // 延迟保存，避免频繁写入
-    setTimeout(saveConfigurations, 500);
+    setProviders(prev => {
+      const newProviders = prev.map(p => 
+        p.id === providerId 
+          ? { ...p, ...updates }
+          : p
+      );
+      
+      // 立即保存配置，不再使用延迟
+      const configsToSave = newProviders.reduce((acc, provider) => {
+        acc[provider.id] = {
+          apiKey: provider.apiKey,
+          baseURL: provider.baseURL,
+          enabled: provider.enabled,
+          status: provider.status,
+          lastTested: provider.lastTested?.toISOString()
+        };
+        return acc;
+      }, {} as Record<string, any>);
+      
+      localStorage.setItem('ai-providers-config', JSON.stringify(configsToSave));
+      
+      return newProviders;
+    });
   };
 
   // 测试连接 - 真实API测试
@@ -367,11 +366,7 @@ export default function AIProvidersConfig() {
         
         // 3秒后清除卡片动画标志
         setTimeout(() => {
-          setProviders(prev => prev.map(p => 
-            p.id === providerId 
-              ? { ...p, showSuccessAnimation: false }
-              : p
-          ));
+          updateProvider(providerId, { showSuccessAnimation: false });
         }, 3000);
       } else {
         throw new Error('连接测试失败，请检查API密钥和网络连接');

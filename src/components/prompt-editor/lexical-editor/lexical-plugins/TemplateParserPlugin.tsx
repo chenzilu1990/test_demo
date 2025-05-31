@@ -20,7 +20,7 @@
 import { useEffect, useRef } from 'react';
 import { $getRoot, $createTextNode, $createParagraphNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { BracketNode, $createBracketNode } from '../../../nodes/BracketNode';
+import { BracketNode, $createBracketNode } from '../nodes/BracketNode';
 import { BracketOption } from '../../types';
 
 interface TemplateParserPluginProps {

@@ -286,7 +286,7 @@ export class OpenAIProvider extends BaseProvider {
       // 根据 OpenAI 文档，image_generation_user_error 也是一种需要用户关注的错误
       if (openAIType === 'image_generation_user_error') {
         return new ProviderError(
-          `图像生成用户错误: ${openAIMessage || '请检查请求参数或账户状态。'}`,
+          `图像生成用户错误: ${openAIMessage || '请检查请求参数或账户状态。'} 可参考文档: https://docs.aihubmix.com/cn/api/GPT-Image-1`,
           ErrorCode.BAD_REQUEST, // 或者一个更具体的错误码
           status || 400,
           this.id,

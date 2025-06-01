@@ -21,9 +21,9 @@
  */
 
 import { LexicalEditor } from 'lexical';
-import { BracketNode } from '../../../nodes/BracketNode';
-import { SelectedValueNode } from '../../../nodes/SelectedValueNode';
-import { BracketOption } from '../../prompt-editor/types';
+import { BracketNode } from '../nodes/BracketNode';
+import { SelectedValueNode } from '../nodes/SelectedValueNode';
+import { BracketOption } from '../../types';
 
 // ============================================================================
 // 组件Props接口
@@ -239,4 +239,4 @@ export type NodeType = 'bracket' | 'selected-value' | 'text' | 'paragraph';
 // ============================================================================
 
 export type { LexicalEditor } from 'lexical';
-export type { BracketOption } from '../../prompt-editor/types'; 
+export type { BracketOption } from '../../types'; 

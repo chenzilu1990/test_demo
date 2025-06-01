@@ -657,7 +657,7 @@ export default function AIChatPage() {
           selectedProviderModel={selectedProviderModel}
           setSelectedProviderModel={setSelectedProviderModel}
           availableModels={availableModels}
-          isImageGenerationModel={isImageGenerationModel}
+          isImageGenerationModel={isImageGenerationModel()}
         />
 
         {/* 对话历史区域 */}

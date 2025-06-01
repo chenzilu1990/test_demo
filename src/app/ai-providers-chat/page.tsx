@@ -5,22 +5,16 @@ import { createProvider } from '@/ai-providers/core/providerFactory';
 import { PROVIDER_CONFIGS } from '@/ai-providers/config/providers';
 import { 
   AIProvider, 
-  ModelCard, 
   CompletionRequest,
   ImageGenerationRequest,
   ChatMessage 
 } from '@/ai-providers/types';
-import InteractivePrompt from '@/components/prompt-editor/InteractivePrompt';
+import { ConversationMessage, ModelOption, PromptTemplateWithOptions } from './components/types';
 import { BracketOption } from '@/components/prompt-editor/types';
-
-interface ConversationMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  imageUrl?: string;
-  timestamp: Date;
-  model?: string;
-}
+import ChatDialog from './components/ChatDialog';
+import ChatInput from './components/ChatInput';
+import ModelSelector from './components/ModelSelector';
+import TemplateGenerator from './components/TemplateGenerator';
 
 // 定义交互式提示词的选项
 const getBracketOptions = (isDallE3: boolean): Record<string, BracketOption> => {
@@ -64,7 +58,17 @@ export default function AIChatPage() {
   const [apiKey, setApiKey] = useState<string>('');
   const [temperature, setTemperature] = useState<number>(0.7);
   const [maxTokens, setMaxTokens] = useState<number>(1000);
-  const [availableModels, setAvailableModels] = useState<Array<{id: string, name: string, provider: string}>>([]);
+  const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
+  const [templates, setTemplates] = useState<string[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  
+  // 参数化模板相关状态
+  const [paramTemplates, setParamTemplates] = useState<PromptTemplateWithOptions[]>([]);
+  const [showParamTemplates, setShowParamTemplates] = useState(false);
+  const [showTemplateGenerator, setShowTemplateGenerator] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState<string>('');
+  const [activeParamTemplate, setActiveParamTemplate] = useState<PromptTemplateWithOptions | undefined>(undefined);
+  const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
 
   const isDallE3Model = useMemo(() => {
     if (!selectedProviderModel) return false;
@@ -86,7 +90,7 @@ export default function AIChatPage() {
     
     try {
       const configs = JSON.parse(savedConfigs);
-      const models: Array<{id: string, name: string, provider: string}> = [];
+      const models: ModelOption[] = [];
       
       console.log('已配置的服务商:', Object.keys(configs));
       
@@ -160,6 +164,199 @@ export default function AIChatPage() {
     const [_, modelId] = selectedProviderModel.split(':');
     const model = provider.getModelById(modelId);
     return model?.capabilities.imageGeneration === true;
+  };
+
+  // 保存和加载模板
+  useEffect(() => {
+    // 从localStorage加载模板
+    const savedTemplates = localStorage.getItem('ai-chat-templates');
+    if (savedTemplates) {
+      try {
+        const parsed = JSON.parse(savedTemplates);
+        if (Array.isArray(parsed)) {
+          setTemplates(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to load saved templates:', e);
+      }
+    }
+  }, []);
+
+  // 保存模板
+  const handleSaveTemplate = (content: string) => {
+    const newTemplates = [...templates];
+    if (!newTemplates.includes(content)) {
+      newTemplates.push(content);
+      setTemplates(newTemplates);
+      localStorage.setItem('ai-chat-templates', JSON.stringify(newTemplates));
+    }
+  };
+
+  // 使用模板
+  const handleUseTemplate = (template: string) => {
+    setInputPrompt(template);
+    setShowTemplates(false);
+  };
+
+  // 删除模板
+  const handleDeleteTemplate = (index: number) => {
+    const newTemplates = [...templates];
+    newTemplates.splice(index, 1);
+    setTemplates(newTemplates);
+    localStorage.setItem('ai-chat-templates', JSON.stringify(newTemplates));
+  };
+
+  // 加载参数化模板
+  useEffect(() => {
+    const savedParamTemplates = localStorage.getItem('ai-chat-param-templates');
+    if (savedParamTemplates) {
+      try {
+        const parsed = JSON.parse(savedParamTemplates);
+        if (Array.isArray(parsed)) {
+          setParamTemplates(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to load saved parametrized templates:', e);
+      }
+    }
+  }, []);
+
+  // 保存参数化模板
+  const handleSaveParamTemplate = (template: PromptTemplateWithOptions) => {
+    const newTemplates = [...paramTemplates, template];
+    setParamTemplates(newTemplates);
+    localStorage.setItem('ai-chat-param-templates', JSON.stringify(newTemplates));
+  };
+
+  // 删除参数化模板
+  const handleDeleteParamTemplate = (index: number) => {
+    const newTemplates = [...paramTemplates];
+    newTemplates.splice(index, 1);
+    setParamTemplates(newTemplates);
+    localStorage.setItem('ai-chat-param-templates', JSON.stringify(newTemplates));
+  };
+
+  // 显示模板生成器
+  const handleShowTemplateGenerator = (prompt: string) => {
+    setSelectedPrompt(prompt);
+    setShowTemplateGenerator(true);
+  };
+
+  // 使用参数化模板
+  const handleUseParamTemplate = (template: PromptTemplateWithOptions) => {
+    setActiveParamTemplate(template);
+    setInputPrompt(template.template);
+    setShowParamTemplates(false);
+  };
+
+  // 清除活动模板
+  const clearActiveTemplate = () => {
+    setActiveParamTemplate(undefined);
+  };
+
+  // 使用LLM生成更多参数选项
+  const handleGenerateMoreOptions = async (paramName: string, currentOptions: string[]): Promise<string[]> => {
+    if (!provider || !selectedProviderModel) {
+      throw new Error("请先选择AI提供商和模型");
+    }
+
+    setIsGeneratingOptions(true);
+    
+    try {
+      // 获取非图像生成模型
+      const [providerId, modelId] = selectedProviderModel.split(':');
+      let useModelId = modelId;
+      
+      // 如果当前是图像生成模型，则尝试找到同一提供商的文本模型
+      if (isImageGenerationModel()) {
+        const textModel = availableModels.find(model => {
+          const [pId, mId] = model.id.split(':');
+          if (pId !== providerId) return false;
+          
+          const modelConfig = provider?.config?.models?.find((m: any) => m.id === mId);
+          return modelConfig && !modelConfig.capabilities?.imageGeneration;
+        });
+        
+        if (textModel) {
+          useModelId = textModel.id.split(':')[1];
+        } else {
+          throw new Error("未找到可用的文本模型");
+        }
+      }
+      
+      // 构建系统提示和用户提示
+      const systemPrompt = `你是一个选项生成助手。用户将提供一个参数名称和现有选项列表，你需要生成10个新的、多样化的、与参数相关的选项。`;
+      
+      const userPrompt = `参数名称: ${paramName}
+现有选项: ${currentOptions.join(', ')}
+
+请生成10个与"${paramName}"相关的新选项，这些选项应该:
+1. 不与现有选项重复
+2. 保持多样性，覆盖不同的可能值
+3. 与参数的语义相关
+4. 实用且具体
+
+直接以JSON数组格式返回，不要添加额外解释。例如:
+["选项1", "选项2", "选项3", ...]`;
+
+      // 调用AI生成新选项
+      const response = await provider.chat({
+        model: useModelId,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 1000
+      });
+      
+      // 解析响应
+      const content = response.choices[0].message.content as string;
+      console.log('生成的选项内容:', content);
+      
+      // 尝试从内容中提取JSON数组
+      let newOptions: string[] = [];
+      
+      // 尝试多种可能的格式
+      try {
+        // 直接作为JSON解析
+        newOptions = JSON.parse(content);
+      } catch (e) {
+        // 尝试匹配JSON数组部分
+        const arrayMatch = content.match(/\[([\s\S]*?)\]/);
+        if (arrayMatch && arrayMatch[0]) {
+          try {
+            newOptions = JSON.parse(arrayMatch[0]);
+          } catch (e2) {
+            // 如果仍然无法解析，尝试手动分割
+            newOptions = content
+              .replace(/^\s*\[|\]\s*$/g, '') // 移除开头和结尾的方括号
+              .split(/,\s*"/)                // 按逗号分割
+              .map((item: string) => 
+                item.replace(/^"|\s*"$/g, '') // 移除引号
+                    .trim()
+              )
+              .filter((item: string) => item.length > 0);
+          }
+        }
+      }
+      
+      // 确保是字符串数组
+      newOptions = newOptions
+        .filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+        .map((item: string) => item.trim());
+      
+      if (newOptions.length === 0) {
+        throw new Error("无法从AI响应中提取有效选项");
+      }
+      
+      return newOptions;
+    } catch (err: any) {
+      console.error("生成选项错误:", err);
+      throw err;
+    } finally {
+      setIsGeneratingOptions(false);
+    }
   };
 
   // 发送消息
@@ -322,147 +519,169 @@ export default function AIChatPage() {
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
       {/* 顶部导航栏 */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="container mx-auto px-4 py-3">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <h1 className="text-xl font-semibold">AI 对话测试</h1>
-        </div>
-      </div>
-
-      {/* 主要内容区域 */}
-      <div className="flex-1 container mx-auto px-4 py-4 flex flex-col min-h-0">
-        {/* 模型选择区域 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">选择模型</label>
-            <select
-              value={selectedProviderModel}
-              onChange={(e) => setSelectedProviderModel(e.target.value)}
-              className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowParamTemplates(!showParamTemplates)}
+              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
             >
-              <option value="">请选择模型</option>
-              {availableModels.length === 0 ? (
-                <option value="" disabled>请先在 AI 服务商配置中心配置并测试服务商</option>
-              ) : (
-                availableModels.map(model => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                    {isImageGenerationModel() && ' (图像生成)'}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-
-          {selectedProviderModel && (
-            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
-              <p className="text-sm">
-                当前模型: <strong>{selectedProviderModel.split(':')[1]}</strong>
-                {isImageGenerationModel() ? ' - 图像生成模式' : ' - 对话模式'}
-              </p>
-            </div>
-          )}
-
-          {availableModels.length === 0 && (
-            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                请先在 <a href="/ai-providers-test" className="underline">AI 服务商配置中心</a> 配置并测试服务商
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* 对话历史区域 */}
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden flex flex-col min-h-0">
-          {/* 对话内容 */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {conversation.length === 0 ? (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400">暂无对话记录</p>
-              </div>
-            ) : (
-              conversation.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      msg.role === 'user'
-                        ? 'bg-blue-500 text-white rounded-br-none'
-                        : 'bg-gray-200 dark:bg-gray-700 rounded-bl-none'
-                    }`}
-                  >
-                    <div className="text-xs opacity-75 mb-1">
-                      {msg.role === 'user' ? '您' : `AI (${msg.model})`}
-                    </div>
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
-                    {msg.imageUrl && (
-                      <img
-                        src={msg.imageUrl}
-                        alt="Generated"
-                        className="mt-2 rounded-lg max-w-full"
-                      />
-                    )}
-                    <div className="text-xs mt-1 opacity-75 text-right">
-                      {msg.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* 错误提示 */}
-          {error && (
-            <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 固定在底部的输入区域 */}
-      <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 p-4">
-        <div className="container mx-auto">
-          <InteractivePrompt
-            value={inputPrompt}
-            onChange={setInputPrompt}
-            bracketOptions={bracketOptions}
-            placeholder={
-              isImageGenerationModel()
-                ? "描述您想要生成的图像..."
-                : "输入您的问题或指令..."
-            }
-            height="8rem"
-          />
-
-          <div className="mt-2 flex justify-between items-center">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {isImageGenerationModel() && (
-                <p>
-                  提示：可以使用 [图像尺寸]
-                  {isDallE3Model && ', [图像质量], [图像风格]'}
-                  来设置参数
-                </p>
-              )}
-              {!isImageGenerationModel() && (
-                <p>提示：可以使用 [温度]、[最大令牌] 来调整参数</p>
-              )}
-            </div>
-
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputPrompt.trim() || !selectedProviderModel || isLoading}
-              className={`px-4 py-2 rounded-full font-medium ${
-                !inputPrompt.trim() || !selectedProviderModel || isLoading
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
-              }`}
+              参数模板 ({paramTemplates.length})
+            </button>
+            <button 
+              onClick={() => setShowTemplates(!showTemplates)}
+              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
             >
-              {isLoading ? '处理中...' : isImageGenerationModel() ? '生成图像' : '发送'}
+              模板 ({templates.length})
+            </button>
+            <button 
+              onClick={handleClearConversation}
+              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+            >
+              清空对话
             </button>
           </div>
         </div>
       </div>
+
+      {/* 参数化模板选择弹窗 */}
+      {showParamTemplates && (
+        <div className="absolute top-16 right-4 z-10 w-96 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 className="font-medium">参数化提示词模板</h3>
+            <button onClick={() => setShowParamTemplates(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <span>&times;</span>
+            </button>
+          </div>
+          <div className="p-2">
+            {paramTemplates.length === 0 ? (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-4">暂无参数化模板</p>
+            ) : (
+              <ul className="space-y-2">
+                {paramTemplates.map((template, index) => (
+                  <li key={index} className="relative p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="font-medium mb-1">{template.title}</div>
+                    <div className="text-sm mb-2 text-gray-600 dark:text-gray-300">
+                      {template.template}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {Object.keys(template.parameterOptions).map(param => (
+                        <span key={param} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded text-xs">
+                          {param}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-1 justify-end">
+                      <button 
+                        onClick={() => handleUseParamTemplate(template)}
+                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        使用
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteParamTemplate(index)}
+                        className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 普通模板选择弹窗 */}
+      {showTemplates && (
+        <div className="absolute top-16 right-4 z-10 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 className="font-medium">提示词模板</h3>
+            <button onClick={() => setShowTemplates(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <span>&times;</span>
+            </button>
+          </div>
+          <div className="p-2">
+            {templates.length === 0 ? (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-4">暂无模板</p>
+            ) : (
+              <ul className="space-y-1">
+                {templates.map((template, index) => (
+                  <li key={index} className="relative group p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <div className="text-sm truncate mb-1" title={template}>
+                      {template.length > 50 ? template.substring(0, 50) + '...' : template}
+                    </div>
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => handleUseTemplate(template)}
+                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        使用
+                      </button>
+                      <button 
+                        onClick={() => handleShowTemplateGenerator(template)}
+                        className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        生成参数模板
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTemplate(index)}
+                        className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 模板生成器 */}
+      <TemplateGenerator 
+        isOpen={showTemplateGenerator}
+        onClose={() => setShowTemplateGenerator(false)}
+        onSaveTemplate={handleSaveParamTemplate}
+        provider={provider}
+        userPrompt={selectedPrompt}
+        availableModels={availableModels}
+      />
+
+      {/* 主要内容区域 */}
+      <div className="flex-1 container mx-auto px-4 py-4 flex flex-col min-h-0">
+        {/* 模型选择区域 */}
+        <ModelSelector 
+          selectedProviderModel={selectedProviderModel}
+          setSelectedProviderModel={setSelectedProviderModel}
+          availableModels={availableModels}
+          isImageGenerationModel={isImageGenerationModel}
+        />
+
+        {/* 对话历史区域 */}
+        <ChatDialog 
+          conversation={conversation} 
+          error={error}
+          onSaveTemplate={handleSaveTemplate}
+        />
+      </div>
+
+      {/* 固定在底部的输入区域 */}
+      <ChatInput 
+        inputPrompt={inputPrompt}
+        setInputPrompt={setInputPrompt}
+        bracketOptions={bracketOptions}
+        isImageGenerationModel={isImageGenerationModel()}
+        isDallE3Model={isDallE3Model}
+        isLoading={isLoading}
+        selectedProviderModel={selectedProviderModel}
+        handleSendMessage={handleSendMessage}
+        activeParamTemplate={activeParamTemplate}
+        onGenerateMoreOptions={handleGenerateMoreOptions}
+        clearActiveTemplate={clearActiveTemplate}
+      />
     </div>
   );
 }

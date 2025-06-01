@@ -11,6 +11,12 @@ import { computeTextDiff } from "./textarea-editor/TextDiffUtils";
 // import LexicalPromptEditor from "./LexicalPromptEditor";
 import LexicalPromptEditor from "./lexical-editor/LexicalPromptEditor";
 
+// 参数化模板接口
+interface PromptTemplateWithOptions {
+  title: string;
+  template: string;
+  parameterOptions: Record<string, string[]>;
+}
 
 // 组件属性接口
 export interface InteractivePromptProps {
@@ -22,17 +28,23 @@ export interface InteractivePromptProps {
   height?: string;
   className?: string;
   useContentEditable?: boolean; // 是否使用contenteditable替代传统文本框
+  paramTemplate?: PromptTemplateWithOptions; // 新增参数化模板属性
+  onGenerateMoreOptions?: (paramName: string, currentOptions: string[]) => Promise<string[]>; // LLM生成更多选项
+  onClear?: () => void; // 新增外部清空回调
 }
 
 export default function InteractivePrompt({
   value,
   onChange,
   templates = [],
-  bracketOptions,
+  bracketOptions: defaultBracketOptions,
   placeholder = "在这里输入您的问题或指令...",
   height = "12rem",
   className = "",
-  useContentEditable = false
+  useContentEditable = false,
+  paramTemplate,
+  onGenerateMoreOptions,
+  onClear
 }: InteractivePromptProps) {
   const [isShowingOptions, setIsShowingOptions] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -46,6 +58,30 @@ export default function InteractivePrompt({
   // 跟踪所有已选择的选项
   const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 合并默认选项和参数化模板选项
+  const bracketOptions = useMemo(() => {
+    if (!paramTemplate) return defaultBracketOptions;
+    
+    // 将 paramTemplate 中的 parameterOptions 转换为 BracketOption 格式
+    const paramOptions: Record<string, BracketOption> = {};
+    
+    Object.entries(paramTemplate.parameterOptions).forEach(([param, options]) => {
+      paramOptions[param] = {
+        type: "single",
+        options
+      };
+    });
+    
+    return { ...defaultBracketOptions, ...paramOptions };
+  }, [defaultBracketOptions, paramTemplate]);
+
+  // 当有参数化模板时，自动设置文本
+  useEffect(() => {
+    if (paramTemplate && !value) {
+      onChange(paramTemplate.template);
+    }
+  }, [paramTemplate, value, onChange]);
   
   // 解析提示词中的方括号内容
   const parseBrackets = (text: string) => {
@@ -77,6 +113,11 @@ export default function InteractivePrompt({
     setSelectedOptions([]);
     if (textareaRef.current) {
       textareaRef.current.focus();
+    }
+    
+    // 调用外部清空回调
+    if (onClear) {
+      onClear();
     }
   };
   
@@ -176,7 +217,14 @@ export default function InteractivePrompt({
     <div className={`space-y-2 ${className}`}>
       {/* 字符计数和模板选择 */}
       <div className="flex justify-between items-center">
-        <div className="text-xs text-gray-500">{value.length} 个字符</div>
+        <div className="text-xs text-gray-500">
+          {paramTemplate && (
+            <span className="mr-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded">
+              {paramTemplate.title}
+            </span>
+          )}
+          {value.length} 个字符
+        </div>
         
         <TemplateSelector 
           templates={templates} 
@@ -227,6 +275,8 @@ export default function InteractivePrompt({
             onOptionSelect={handleOptionSelect}
             options={currentBracket.options}
             type={currentBracket.type}
+            parameterName={currentBracket.originalContent}
+            onGenerateMoreOptions={onGenerateMoreOptions}
           />
         )}
         

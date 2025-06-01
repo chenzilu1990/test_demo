@@ -1,5 +1,8 @@
 import { BracketOption, PromptTemplate } from "./types";
 
+
+
+
 /**
  * 用户画像分析相关配置
  */
@@ -118,6 +121,8 @@ export const articleTemplates: PromptTemplate[] = [
   }
 ];
 
+
+
 /**
  * 融合所有选项，可用于支持多场景的通用应用
  */
@@ -133,3 +138,5 @@ export const allPromptTemplates: PromptTemplate[] = [
   ...userProfileTemplates,
   ...articleTemplates
 ]; 
+
+

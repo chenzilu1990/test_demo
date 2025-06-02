@@ -1,10 +1,10 @@
-import { PromptTemplateWithOptions } from './types';
+import { PromptTemplate } from '@/components/prompt-editor/types';
 import { AIProvider, ChatMessage } from '@/ai-providers/types';
 
 export const SYSTEM_PROMPT = `你是一个专业的提示词模板生成器。你需要将用户的提示词转换为带参数的模板格式，参数必须用方括号[]包裹。
 输出必须是有效的JSON格式，包含以下字段：
 1. title: 简短描述模板用途的标题
-2. template: 将原始提示词中的具体内容替换为参数的模板
+2. prompt: 将原始提示词中的具体内容替换为参数的模板
 3. parameterOptions: 为每个参数提供可选值的对象，每个参数至少提供5个选项
 
 确保JSON格式有效，每个参数必须有参数选项。每个参数的选项要尽量覆盖不同的可能值，有代表性。`;
@@ -16,7 +16,7 @@ ${userPrompt}
 输出格式示例：
 {
   "title": "目标用户画像分析",
-  "template": "[国家]市场中，目标群体为[性别]，年龄段[年龄段]，关注品类为[产品或品类]，产品优势为[产品优势]。",
+  "prompt": "[国家]市场中，目标群体为[性别]，年龄段[年龄段]，关注品类为[产品或品类]，产品优势为[产品优势]。",
   "parameterOptions": {
     "国家": ["美国", "中国", "印度", "英国", "德国"],
     "性别": ["男性", "女性", "非二元性别"],
@@ -51,11 +51,11 @@ export const extractJSON = (content: string): string => {
 /**
  * 验证生成的模板格式
  */
-export const validateTemplate = (template: any): template is PromptTemplateWithOptions => {
+export const validateTemplate = (template: any): template is PromptTemplate => {
   if (!template || typeof template !== 'object') return false;
   
   if (!template.title || typeof template.title !== 'string') return false;
-  if (!template.template || typeof template.template !== 'string') return false;
+  if (!template.prompt || typeof template.prompt !== 'string') return false;
   if (!template.parameterOptions || typeof template.parameterOptions !== 'object') return false;
   
   // 验证参数选项
@@ -96,7 +96,7 @@ export const generateTemplateFromPrompt = async (
   provider: AIProvider,
   selectedModel: string,
   userPrompt: string
-): Promise<PromptTemplateWithOptions> => {
+): Promise<PromptTemplate> => {
   const modelId = parseModelId(selectedModel);
   
   console.log(`使用模型 ${selectedModel} 生成模板`);

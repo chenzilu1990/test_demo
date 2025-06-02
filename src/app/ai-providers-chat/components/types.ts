@@ -15,9 +15,3 @@ export interface ModelOption {
   provider: string;
 }
 
-// 带参数的模板类型定义
-export interface PromptTemplateWithOptions {
-  title: string;
-  template: string;
-  parameterOptions: Record<string, string[]>;
-} 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PromptTemplateWithOptions, ModelOption } from './types';
+import { PromptTemplate } from '@/components/prompt-editor/types';
+import { ModelOption } from '@/app/ai-providers-chat/components/types';
 import { AIProvider } from '@/ai-providers/types';
 import ModelFilter from './ModelFilter';
 import TemplatePreview from './TemplatePreview';
@@ -8,7 +9,7 @@ import { generateTemplateFromPrompt } from './templateUtils';
 interface TemplateGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveTemplate: (template: PromptTemplateWithOptions) => void;
+  onSaveTemplate: (template: PromptTemplate) => void;
   provider: AIProvider | null;
   userPrompt: string;
   availableModels: ModelOption[];
@@ -23,7 +24,7 @@ const TemplateGenerator: React.FC<TemplateGeneratorProps> = ({
   availableModels
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedTemplate, setGeneratedTemplate] = useState<PromptTemplateWithOptions | null>(null);
+  const [generatedTemplate, setGeneratedTemplate] = useState<PromptTemplate | null>(null);
   const [error, setError] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
 

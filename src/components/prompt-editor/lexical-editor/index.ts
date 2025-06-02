@@ -68,7 +68,7 @@ export type {
   
   // 外部类型
   LexicalEditor,
-  BracketOption,
+  BracketParameterOptions,
 } from './lexical-types';
 
 // ============================================================================

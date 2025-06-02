@@ -21,13 +21,14 @@ import { useEffect, useRef } from 'react';
 import { $getRoot, $createTextNode, $createParagraphNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { BracketNode, $createBracketNode } from '../nodes/BracketNode';
-import { BracketOption } from '../../types';
+import { BracketParameterOptions } from "../../types";
+
 
 interface TemplateParserPluginProps {
   /** 要解析的模板字符串 */
   initialValue: string;
   /** 方括号选项配置，key为方括号内容，value为选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
 }
 
 /**
@@ -40,6 +41,7 @@ export function TemplateParserPlugin({
 }: TemplateParserPluginProps) {
   const [editor] = useLexicalComposerContext();
   const lastParsedValueRef = useRef<string>('');
+  const isInitializedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!initialValue) return;
@@ -52,7 +54,8 @@ export function TemplateParserPlugin({
     // 智能检查：区分外部更新 vs 用户输入
     let shouldUpdate = true;
     
-    if (lastParsedValueRef.current !== '') {
+    // 如果不是首次初始化，则进行智能检查
+    if (isInitializedRef.current && lastParsedValueRef.current !== '') {
       editor.getEditorState().read(() => {
         const root = $getRoot();
         const currentContent = root.getTextContent();
@@ -71,6 +74,7 @@ export function TemplateParserPlugin({
     // 开发环境日志
     if (process.env.NODE_ENV === 'development') {
       console.log('🔄 模板解析:', initialValue);
+      console.log('📝 可用的方括号选项:', Object.keys(bracketOptions));
     }
     
     lastParsedValueRef.current = initialValue;
@@ -92,6 +96,9 @@ export function TemplateParserPlugin({
       // 将段落添加到根节点
       root.append(paragraph);
 
+      // 标记已初始化
+      isInitializedRef.current = true;
+
       if (process.env.NODE_ENV === 'development') {
         const bracketCount = parsedNodes.filter(node => node instanceof BracketNode).length;
         console.log(`✅ 模板解析完成，创建了 ${bracketCount} 个方括号节点`);
@@ -110,7 +117,7 @@ export function TemplateParserPlugin({
  */
 function parseTemplateString(
   template: string, 
-  bracketOptions: Record<string, BracketOption>
+  bracketOptions: BracketParameterOptions
 ) {
   const nodes = [];
   const regex = /\[(.*?)\]/g;
@@ -133,7 +140,7 @@ function parseTemplateString(
       const bracketNode = $createBracketNode(
         `[${bracketContent}]`,
         bracketContent,
-        bracketOptions[bracketContent].options
+        bracketOptions[bracketContent]
       );
       nodes.push(bracketNode);
     } else {

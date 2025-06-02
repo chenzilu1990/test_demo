@@ -27,7 +27,7 @@
 
 "use client";
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { $getRoot, EditorState, LexicalEditor } from 'lexical';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
@@ -45,6 +45,7 @@ import OptionPanel from '../OptionPanel';
 
 // 导入类型定义
 import type { LexicalPromptEditorProps } from './lexical-types';
+import { BracketParameterOptions } from '../types';
 
 /**
  * Lexical智能提示词编辑器主组件
@@ -55,19 +56,34 @@ import type { LexicalPromptEditorProps } from './lexical-types';
  * @param placeholder - 占位符文本
  * @param height - 编辑器高度
  * @param className - 额外的CSS类名
+ * @param onGenerateMoreOptions - 生成更多选项回调
+ * @param onBracketOptionsUpdate - 选项更新回调
  */
 export default function LexicalPromptEditor({
   value,
   onChange,
-  bracketOptions,
+  bracketOptions: defaultBracketOptions,
   placeholder = "输入您的提示词模板...",
   height = "12rem",
-  className = ""
+  className = "",
+  onGenerateMoreOptions,
+  onBracketOptionsUpdate     
 }: LexicalPromptEditorProps) {
   
   // ========================================================================
   // 钩子和状态管理
   // ========================================================================
+  
+  // 创建本地状态来管理扩展后的bracketOptions
+  const [localBracketOptions, setLocalBracketOptions] = useState<BracketParameterOptions>(defaultBracketOptions);
+  
+  // 初始化本地bracketOptions
+  useEffect(() => {
+    setLocalBracketOptions(defaultBracketOptions);
+  }, [defaultBracketOptions]);
+  
+  // 使用本地的bracketOptions
+  const bracketOptions = useMemo(() => localBracketOptions, [localBracketOptions]);
   
   // 编辑器配置
   const initialConfig = useLexicalConfig({
@@ -88,6 +104,25 @@ export default function LexicalPromptEditor({
   // ========================================================================
   // 事件处理函数
   // ========================================================================
+  
+  /**
+   * 处理选项更新的回调
+   */
+  const handleOptionsUpdated = useCallback((paramName: string, updatedOptions: string[]) => {
+    setLocalBracketOptions(prev => {
+      const updated = {
+        ...prev,
+        [paramName]: updatedOptions
+      };
+      
+      // 通知父组件选项已更新
+      if (onBracketOptionsUpdate) {
+        onBracketOptionsUpdate(updated);
+      }
+      
+      return updated;
+    });
+  }, [onBracketOptionsUpdate]);
   
   /**
    * 处理编辑器内容变化
@@ -193,6 +228,9 @@ export default function LexicalPromptEditor({
             onOptionSelect={handleOptionSelect}
             options={currentSelection.options}
             type={currentSelection.type}
+            parameterName={currentSelection.type}
+            onGenerateMoreOptions={onGenerateMoreOptions}
+            onOptionsUpdated={handleOptionsUpdated}
           />
         )}
       </LexicalComposer>

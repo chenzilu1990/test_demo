@@ -26,7 +26,7 @@ import { useState, useCallback } from 'react';
 import { LexicalEditor, $setSelection, $createRangeSelection } from 'lexical';
 import { BracketNode, $isBracketNode } from '../nodes/BracketNode';
 import { SelectedValueNode, $createSelectedValueNode, $isSelectedValueNode } from '../nodes/SelectedValueNode';
-import { BracketOption } from '../../types';
+import { BracketParameterOptions } from '../../types';
 
 interface CurrentSelection {
   /** 选项类型 */
@@ -41,7 +41,7 @@ interface CurrentSelection {
 
 interface UseOptionSelectionOptions {
   /** 方括号选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
 }
 
 /**
@@ -93,7 +93,7 @@ export function useOptionSelection({ bracketOptions }: UseOptionSelectionOptions
     if (bracketOptions[bracketContent]) {
       setCurrentSelection({
         type: node.getValueType(),
-        options: bracketOptions[bracketContent].options,
+        options: bracketOptions[bracketContent],
         node,
         editor
       });

@@ -9,41 +9,27 @@ import {
   ImageGenerationRequest,
   ChatMessage 
 } from '@/ai-providers/types';
-import { ConversationMessage, ModelOption, PromptTemplateWithOptions } from './components/types';
-import { BracketOption } from '@/components/prompt-editor/types';
+import { ConversationMessage, ModelOption } from './components/types';
+import { PromptTemplate } from '@/components/prompt-editor/types';
+import { BracketParameterOptions } from "@/components/prompt-editor/types";
 import ChatDialog from './components/ChatDialog';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
 import TemplateGenerator from './components/TemplateGenerator';
 
 // 定义交互式提示词的选项
-const getBracketOptions = (isDallE3: boolean): Record<string, BracketOption> => {
-  const options: Record<string, BracketOption> = {
-    "图像尺寸": {
-      type: "single",
-      options: isDallE3 
-        ? ["1024x1024", "1024x1792", "1792x1024"]
-        : ["256x256", "512x512", "1024x1024"]
-    },
-    "温度": {
-      type: "single",
-      options: ["0", "0.3", "0.5", "0.7", "1.0", "1.5", "2.0"]
-    },
-    "最大令牌": {
-      type: "single",
-      options: ["100", "500", "1000", "2000", "4000"]
-    }
+const getBracketOptions = (isDallE3: boolean): BracketParameterOptions => {
+  const options: BracketParameterOptions = {
+    "图像尺寸": isDallE3 
+      ? ["1024x1024", "1024x1792", "1792x1024"]
+      : ["256x256", "512x512", "1024x1024"],
+    "温度": ["0", "0.3", "0.5", "0.7", "1.0", "1.5", "2.0"],
+    "最大令牌": ["100", "500", "1000", "2000", "4000"]
   };
 
   if (isDallE3) {
-    options["图像质量"] = {
-      type: "single",
-      options: ["standard", "hd"]
-    };
-    options["图像风格"] = {
-      type: "single",
-      options: ["vivid", "natural"]
-    };
+    options["图像质量"] = ["standard", "hd"];
+    options["图像风格"] = ["vivid", "natural"];
   }
   return options;
 };
@@ -63,11 +49,11 @@ export default function AIChatPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   
   // 参数化模板相关状态
-  const [paramTemplates, setParamTemplates] = useState<PromptTemplateWithOptions[]>([]);
+  const [paramTemplates, setParamTemplates] = useState<PromptTemplate[]>([]);
   const [showParamTemplates, setShowParamTemplates] = useState(false);
   const [showTemplateGenerator, setShowTemplateGenerator] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
-  const [activeParamTemplate, setActiveParamTemplate] = useState<PromptTemplateWithOptions | undefined>(undefined);
+  const [activeParamTemplate, setActiveParamTemplate] = useState<PromptTemplate | undefined>(undefined);
   const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
 
   const isDallE3Model = useMemo(() => {
@@ -222,7 +208,7 @@ export default function AIChatPage() {
   }, []);
 
   // 保存参数化模板
-  const handleSaveParamTemplate = (template: PromptTemplateWithOptions) => {
+  const handleSaveParamTemplate = (template: PromptTemplate) => {
     const newTemplates = [...paramTemplates, template];
     setParamTemplates(newTemplates);
     localStorage.setItem('ai-chat-param-templates', JSON.stringify(newTemplates));
@@ -243,9 +229,9 @@ export default function AIChatPage() {
   };
 
   // 使用参数化模板
-  const handleUseParamTemplate = (template: PromptTemplateWithOptions) => {
+  const handleUseParamTemplate = (template: PromptTemplate) => {
     setActiveParamTemplate(template);
-    setInputPrompt(template.template);
+    setInputPrompt(template.prompt);
     setShowParamTemplates(false);
   };
 
@@ -445,7 +431,7 @@ export default function AIChatPage() {
         // 添加调试日志
         console.log('图像生成响应:', response);
         console.log('获取到的图像URL:', imageUrl);
-        
+
         setConversation(prev => [...prev, assistantMessage]);
       } else {
         // 文本对话
@@ -556,16 +542,16 @@ export default function AIChatPage() {
           <div className="p-2">
             {paramTemplates.length === 0 ? (
               <p className="text-center text-gray-500 dark:text-gray-400 py-4">暂无参数化模板</p>
-            ) : (
+              ) : (
               <ul className="space-y-2">
                 {paramTemplates.map((template, index) => (
                   <li key={index} className="relative p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="font-medium mb-1">{template.title}</div>
                     <div className="text-sm mb-2 text-gray-600 dark:text-gray-300">
-                      {template.template}
+                      {template.prompt}
                     </div>
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {Object.keys(template.parameterOptions).map(param => (
+                      {Object.keys(template.parameterOptions || {}).map(param => (
                         <span key={param} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded text-xs">
                           {param}
                         </span>
@@ -590,8 +576,8 @@ export default function AIChatPage() {
               </ul>
             )}
           </div>
-        </div>
-      )}
+            </div>
+          )}
 
       {/* 普通模板选择弹窗 */}
       {showTemplates && (
@@ -601,7 +587,7 @@ export default function AIChatPage() {
             <button onClick={() => setShowTemplates(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
               <span>&times;</span>
             </button>
-          </div>
+            </div>
           <div className="p-2">
             {templates.length === 0 ? (
               <p className="text-center text-gray-500 dark:text-gray-400 py-4">暂无模板</p>
@@ -672,7 +658,7 @@ export default function AIChatPage() {
       <ChatInput 
         inputPrompt={inputPrompt}
         setInputPrompt={setInputPrompt}
-        bracketOptions={bracketOptions}
+            bracketOptions={bracketOptions}
         isImageGenerationModel={isImageGenerationModel()}
         isDallE3Model={isDallE3Model}
         isLoading={isLoading}

@@ -1,18 +1,17 @@
 import React, { memo, useCallback } from 'react';
 import InteractivePrompt from '@/components/prompt-editor/InteractivePrompt';
-import { BracketOption } from '@/components/prompt-editor/types';
-import { PromptTemplateWithOptions } from './types';
+import { PromptTemplate,BracketParameterOptions } from "@/components/prompt-editor/types";
 
 interface ChatInputProps {
   inputPrompt: string;
   setInputPrompt: (value: string) => void;
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
   isImageGenerationModel: boolean;
   isDallE3Model: boolean;
   isLoading: boolean;
   selectedProviderModel: string;
   handleSendMessage: () => void;
-  activeParamTemplate?: PromptTemplateWithOptions;
+  activeParamTemplate?: PromptTemplate;
   onGenerateMoreOptions?: (paramName: string, currentOptions: string[]) => Promise<string[]>;
   clearActiveTemplate?: () => void;
 }

@@ -3,33 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import LexicalPromptEditor from "@/components/prompt-editor/lexical-editor/LexicalPromptEditor";
-import { BracketOption } from "@/components/prompt-editor/types";
+import { BracketParameterOptions } from "@/components/prompt-editor/types";
 
 export default function LexicalDemo() {
   const [prompt, setPrompt] = useState("我的目标市场是[国家]，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");
 
   // 方括号选项配置
-  const bracketOptions: Record<string, BracketOption> = {
-    "国家": { 
-      type: "国家", 
-      options: ["中国", "美国", "日本", "韩国", "德国", "法国", "英国", "澳大利亚"] 
-    },
-    "性别": { 
-      type: "性别", 
-      options: ["男性", "女性", "不限"] 
-    },
-    "年龄段": { 
-      type: "年龄段", 
-      options: ["18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上", "不限"] 
-    },
-    "产品或品类": { 
-      type: "产品或品类", 
-      options: ["美妆护肤", "服装鞋帽", "家居用品", "电子产品", "食品饮料", "运动健身", "母婴用品"] 
-    },
-    "产品优势或卖点": { 
-      type: "产品优势", 
-      options: ["价格实惠", "质量上乘", "设计独特", "功能创新", "使用方便", "环保健康"] 
-    }
+  const bracketOptions: BracketParameterOptions = {
+    "国家" : ["中国","美国","日本","韩国","德国","法国","英国","澳大利亚"],
+    "性别" : ["男性", "女性", "不限"],
+    "年龄段": ["18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上", "不限"],
+    "产品或品类": [
+        "美妆护肤",
+        "服装鞋帽",
+        "家居用品",
+        "电子产品",
+        "食品饮料",
+        "运动健身",
+        "母婴用品",
+      ],
+    "产品优势或卖点": [
+        "价格实惠",
+        "质量上乘",
+        "设计独特",
+        "功能创新",
+        "使用方便",
+        "环保健康",
+      ],
   };
 
   return (
@@ -54,6 +54,10 @@ export default function LexicalDemo() {
             bracketOptions={bracketOptions}
             height="10rem"
             placeholder="在这里输入您的提示词模板..."
+            onGenerateMoreOptions={(paramName: string, currentOptions: string[]) => {
+              console.log("onGenerateMoreOptions", paramName, currentOptions);
+              return Promise.resolve([]);
+            }}
           />
         </div>
         

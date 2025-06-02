@@ -1,8 +1,8 @@
 import React from 'react';
-import { PromptTemplateWithOptions } from './types';
+import { PromptTemplate } from '@/components/prompt-editor/types';
 
 interface TemplatePreviewProps {
-  template: PromptTemplateWithOptions;
+  template: PromptTemplate;
 }
 
 const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template }) => {
@@ -17,13 +17,13 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template }) => {
           <div className="mb-3">
             <span className="font-medium">模板:</span> 
             <pre className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded overflow-x-auto whitespace-pre-wrap">
-              {template.template}
+              {template.prompt}
             </pre>
           </div>
           <div>
             <span className="font-medium">参数选项:</span>
             <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2">
-              {Object.entries(template.parameterOptions).map(([param, options]) => (
+              {Object.entries(template.parameterOptions || {}).map(([param, options]) => (
                 <div key={param} className="p-2 bg-gray-100 dark:bg-gray-700 rounded">
                   <div className="font-medium text-sm">{param}:</div>
                   <div className="text-sm mt-1 flex flex-wrap gap-1">

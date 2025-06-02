@@ -297,17 +297,17 @@ export default function AIProvidersConfig() {
       
       // 立即保存配置，不再使用延迟
       const configsToSave = newProviders.reduce((acc, provider) => {
-        acc[provider.id] = {
-          apiKey: provider.apiKey,
-          baseURL: provider.baseURL,
-          enabled: provider.enabled,
-          status: provider.status,
-          lastTested: provider.lastTested?.toISOString()
-        };
-        return acc;
-      }, {} as Record<string, any>);
-      
-      localStorage.setItem('ai-providers-config', JSON.stringify(configsToSave));
+      acc[provider.id] = {
+        apiKey: provider.apiKey,
+        baseURL: provider.baseURL,
+        enabled: provider.enabled,
+        status: provider.status,
+        lastTested: provider.lastTested?.toISOString()
+      };
+      return acc;
+    }, {} as Record<string, any>);
+    
+    localStorage.setItem('ai-providers-config', JSON.stringify(configsToSave));
       
       return newProviders;
     });

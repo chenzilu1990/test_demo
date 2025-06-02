@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { BracketOption } from './types';
+// import { BracketParameterOptions } from './types';
 
 interface OptionPanelProps {
   isVisible: boolean;
@@ -9,6 +9,7 @@ interface OptionPanelProps {
   type: string;
   parameterName?: string; // 参数名称，用于LLM生成相关选项
   onGenerateMoreOptions?: (paramName: string, currentOptions: string[]) => Promise<string[]>; // 生成更多选项的回调
+  onOptionsUpdated?: (paramName: string, updatedOptions: string[]) => void; // 新增：选项更新回调
 }
 
 export default function OptionPanel({
@@ -18,7 +19,8 @@ export default function OptionPanel({
   options: initialOptions,
   type,
   parameterName,
-  onGenerateMoreOptions
+  onGenerateMoreOptions,
+  onOptionsUpdated
 }: OptionPanelProps) {
   const [options, setOptions] = useState<string[]>(initialOptions);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,7 +55,13 @@ export default function OptionPanel({
       // 过滤掉已有选项，只添加新的选项
       const uniqueNewOptions = newOptions.filter(opt => !options.includes(opt));
       if (uniqueNewOptions.length > 0) {
-        setOptions(prev => [...prev, ...uniqueNewOptions]);
+        const updatedOptions = [...options, ...uniqueNewOptions];
+        setOptions(updatedOptions);
+        
+        // 通知父组件选项已更新
+        if (onOptionsUpdated && parameterName) {
+          onOptionsUpdated(parameterName, updatedOptions);
+        }
       } else {
         setError("未找到新的选项");
       }

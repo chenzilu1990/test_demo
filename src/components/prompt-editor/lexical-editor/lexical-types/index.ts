@@ -23,7 +23,7 @@
 import { LexicalEditor } from 'lexical';
 import { BracketNode } from '../nodes/BracketNode';
 import { SelectedValueNode } from '../nodes/SelectedValueNode';
-import { BracketOption } from '../../types';
+import { BracketParameterOptions } from '../../types';
 
 // ============================================================================
 // 组件Props接口
@@ -38,13 +38,17 @@ export interface LexicalPromptEditorProps {
   /** 内容变化回调 */
   onChange: (value: string) => void;
   /** 方括号选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
   /** 占位符文本 */
   placeholder?: string;
   /** 编辑器高度 */
   height?: string;
   /** 额外的CSS类名 */
   className?: string;
+  /** 生成更多选项回调 */
+  onGenerateMoreOptions: (paramName: string, currentOptions: string[]) => Promise<string[]>;
+  /** 选项更新回调 */
+  onBracketOptionsUpdate?: (updatedOptions: BracketParameterOptions) => void;
 }
 
 /**
@@ -54,7 +58,7 @@ export interface TemplateParserPluginProps {
   /** 要解析的模板字符串 */
   initialValue: string;
   /** 方括号选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
 }
 
 /**
@@ -62,7 +66,7 @@ export interface TemplateParserPluginProps {
  */
 export interface ClickHandlerPluginProps {
   /** 方括号选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
   /** 方括号点击回调 */
   onBracketClick: BracketClickHandler;
   /** 已选择值点击回调 */
@@ -158,7 +162,7 @@ export interface UseLexicalConfigOptions {
  */
 export interface UseOptionSelectionOptions {
   /** 方括号选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
 }
 
 // ============================================================================
@@ -239,4 +243,4 @@ export type NodeType = 'bracket' | 'selected-value' | 'text' | 'paragraph';
 // ============================================================================
 
 export type { LexicalEditor } from 'lexical';
-export type { BracketOption } from '../../types'; 
+export type { BracketParameterOptions } from '../../types'; 

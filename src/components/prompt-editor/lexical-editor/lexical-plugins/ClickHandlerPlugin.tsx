@@ -23,11 +23,11 @@ import { LexicalEditor, $getNearestNodeFromDOMNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { BracketNode, $isBracketNode } from '../nodes/BracketNode';
 import { SelectedValueNode, $isSelectedValueNode } from '../nodes/SelectedValueNode';
-import { BracketOption } from '../../types';
+import { BracketParameterOptions } from '../../types';
 
 interface ClickHandlerPluginProps {
   /** 方括号选项配置 */
-  bracketOptions: Record<string, BracketOption>;
+  bracketOptions: BracketParameterOptions;
   /** 方括号点击回调 */
   onBracketClick: (bracketType: string, options: string[], node: BracketNode, editor: LexicalEditor) => void;
   /** 已选择值点击回调 */
@@ -110,7 +110,7 @@ export function ClickHandlerPlugin({
 function handleBracketNodeClick(
   domElement: HTMLElement,
   lexicalNode: BracketNode,
-  bracketOptions: Record<string, BracketOption>,
+  bracketOptions: BracketParameterOptions,
   onBracketClick: (bracketType: string, options: string[], node: BracketNode, editor: LexicalEditor) => void,
   editor: LexicalEditor
 ) {
@@ -121,7 +121,7 @@ function handleBracketNodeClick(
     lexicalNode.select();
     
     // 触发回调显示选项面板
-    onBracketClick(bracketType, bracketOptions[bracketType].options, lexicalNode, editor);
+    onBracketClick(bracketType, bracketOptions[bracketType], lexicalNode, editor);
     
     if (process.env.NODE_ENV === 'development') {
       console.log('🎯 方括号点击:', bracketType);

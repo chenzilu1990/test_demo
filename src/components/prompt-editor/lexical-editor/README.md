@@ -184,14 +184,7 @@ function CustomLexicalEditor() {
 | height | string | "12rem" | 编辑器高度 |
 | className | string | "" | 额外的CSS类名 |
 
-### BracketOption 接口
 
-```typescript
-interface BracketOption {
-  type: string;      // 选项类型显示名
-  options: string[]; // 可选项列表
-}
-```
 
 ### 钩子函数
 

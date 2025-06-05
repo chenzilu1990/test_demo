@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { SelectedOption } from '../types';
+import { SelectedOption, BracketFormatConfig } from '../types';
 import TextareaPrompt from './TextareaPrompt';
 
 interface OverlayTextareaPromptProps {
@@ -7,7 +7,7 @@ interface OverlayTextareaPromptProps {
   onChange: (value: string) => void;
   selectedOptions: SelectedOption[];
   onSelectedOptionsChange: (options: SelectedOption[]) => void;
-  brackets: Array<{content: string, start: number, end: number}>;
+  brackets: Array<{content: string, start: number, end: number, formatConfig?: BracketFormatConfig}>;
   onBracketClick: (bracketContent: string, startPos: number, endPos: number) => void;
   onSelectedOptionClick: (selectedOption: SelectedOption) => void;
   placeholder?: string;
@@ -214,7 +214,7 @@ export default function OverlayTextareaPrompt({
             key={element.id}
             className={`absolute pointer-events-auto cursor-pointer rounded-sm transition-all duration-150 ${
               element.type === 'bracket'
-                ? 'text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/50'
+                ? element.data.formatConfig?.className || 'text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/50'
                 : 'bg-green-100/50 dark:bg-green-800/70 text-green-800 dark:text-green-100 hover:bg-green-200 dark:hover:bg-green-700'
             }`}
                           style={{
@@ -240,9 +240,9 @@ export default function OverlayTextareaPrompt({
                 ? `点击选择 [${element.content}]` 
                 : `点击重新选择 ${element.data.type}`
             }
-          >
-            {element.type === 'bracket' ? `[${element.content}]` : element.content}
-          </div>
+                      >
+              {element.type === 'bracket' ? value.substring(element.start, element.end) : element.content}
+            </div>
         ))}
       </div>
     </div>

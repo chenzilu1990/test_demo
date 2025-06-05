@@ -7,7 +7,7 @@ import OptionPanel from "./OptionPanel";
 import InteractiveContent from "./textarea-editor/InteractiveContent";
 import TextareaPrompt from "./textarea-editor/TextareaPrompt";
 import OverlayTextareaPrompt from "./textarea-editor/OverlayTextareaPrompt";
-import { BracketParameterOptions, PromptTemplate, SelectedOption } from "./types";
+import { BracketParameterOptions, PromptTemplate, SelectedOption, BracketFormatConfig, DEFAULT_BRACKET_FORMATS } from "./types";
 import { computeTextDiff } from "./textarea-editor/TextDiffUtils";
 // import LexicalPromptEditor from "./LexicalPromptEditor";
 import LexicalPromptEditor from "./lexical-editor/LexicalPromptEditor";
@@ -28,6 +28,7 @@ export interface InteractivePromptProps {
   onGenerateMoreOptions?: (paramName: string, currentOptions: string[]) => Promise<string[]>; // LLM生成更多选项
   onClear?: () => void; // 新增外部清空回调
   onBracketOptionsUpdate?: (updatedOptions: BracketParameterOptions) => void; // 新增：选项更新回调
+  bracketFormats?: BracketFormatConfig[]; // 括号格式配置
 }
 
 export default function InteractivePrompt({
@@ -42,7 +43,8 @@ export default function InteractivePrompt({
   paramTemplate,
   onGenerateMoreOptions,
   onClear,
-  onBracketOptionsUpdate
+  onBracketOptionsUpdate,
+  bracketFormats = DEFAULT_BRACKET_FORMATS
 }: InteractivePromptProps) {
   const [isShowingOptions, setIsShowingOptions] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -96,19 +98,66 @@ export default function InteractivePrompt({
   }, [onBracketOptionsUpdate]);
   
   const parseBrackets = (text: string) => {
-    const regex = /\[(.*?)\]/g;
-    let match;
     const brackets = [];
     
-    while ((match = regex.exec(text)) !== null) {
-      brackets.push({
-        content: match[1],
-        start: match.index,
-        end: match.index + match[0].length
-      });
+    const allMatches: Array<{
+      content: string;
+      start: number;
+      end: number;
+      type: string;
+      fullMatch: string;
+      priority: number;
+      formatConfig: BracketFormatConfig;
+    }> = [];
+    
+    // 使用配置化的格式匹配
+    bracketFormats.forEach((formatConfig) => {
+      let match;
+      // 重新创建正则表达式以重置lastIndex
+      const tempRegex = new RegExp(formatConfig.regex.source, formatConfig.regex.flags);
+      while ((match = tempRegex.exec(text)) !== null) {
+        allMatches.push({
+          content: match[1] || '', // 确保捕获组存在
+          start: match.index,
+          end: match.index + match[0].length,
+          type: formatConfig.type,
+          fullMatch: match[0],
+          priority: formatConfig.priority,
+          formatConfig
+        });
+      }
+    });
+    
+    // 按位置和优先级排序（位置优先，然后按优先级倒序）
+    allMatches.sort((a, b) => {
+      if (a.start !== b.start) return a.start - b.start;
+      return b.priority - a.priority; // 优先级高的排前面
+    });
+    
+    for (let i = 0; i < allMatches.length; i++) {
+      const current = allMatches[i];
+      let isOverlapped = false;
+      
+      // 检查是否与已添加的匹配项重叠
+      for (const existing of brackets) {
+        if (!(current.end <= existing.start || current.start >= existing.end)) {
+          isOverlapped = true;
+          break;
+        }
+      }
+      
+      if (!isOverlapped) {
+        brackets.push({
+          content: current.content,
+          start: current.start,
+          end: current.end,
+          formatConfig: current.formatConfig // 保存格式配置信息
+        });
+      }
     }
     
-    return brackets;
+    // 最终按位置排序
+    return brackets.sort((a, b) => a.start - b.start);
   };
 
   const handleTemplateSelect = (prompt: string): void => {
@@ -142,7 +191,16 @@ export default function InteractivePrompt({
   };
 
   const handleSelectedOptionClick = (selectedOption: SelectedOption) => {
-    const bracketKey = selectedOption.originalBracket.slice(1, -1);
+    // 提取括号内的内容，支持 [*], {*}, {{*}} 格式
+    let bracketKey = '';
+    const bracket = selectedOption.originalBracket;
+    
+    if (bracket.startsWith('{{') && bracket.endsWith('}}')) {
+      bracketKey = bracket.slice(2, -2);
+    } else if ((bracket.startsWith('{') && bracket.endsWith('}')) || 
+               (bracket.startsWith('[') && bracket.endsWith(']'))) {
+      bracketKey = bracket.slice(1, -1);
+    }
     
     if (bracketOptions[bracketKey]) {
       setCurrentBracket({
@@ -159,9 +217,7 @@ export default function InteractivePrompt({
   const handleOptionSelect = (option: string) => {
     if (currentBracket) {
       const { start, end } = currentBracket.position;
-      const originalBracket = currentBracket.originalContent ? 
-        `[${currentBracket.originalContent}]` : 
-        value.substring(start, end);
+      const originalBracket = value.substring(start, end);
       
       const newPrompt = value.substring(0, start) + 
                      option + 
@@ -284,7 +340,7 @@ export default function InteractivePrompt({
       </div>
       
       <div className="text-xs text-gray-500">
-        <p>提示：点击蓝色的[方括号]内容可以选择选项，点击绿色高亮的已选项可以重新选择。</p>
+        <p>提示：点击蓝色的 {bracketFormats.map(format => format.description).join('、')} 内容可以选择选项，点击绿色高亮的已选项可以重新选择。</p>
       </div>
       
       <style jsx global>{`

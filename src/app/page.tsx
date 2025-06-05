@@ -27,12 +27,7 @@ export default function Home() {
         </ol>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row flex-wrap">
-          <Link
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/test"
-          >
-            测试AI服务提供商
-          </Link>
+
           
           <Link
             className="rounded-full border border-solid border-orange-600 transition-colors flex items-center justify-center bg-orange-600 text-white gap-2 hover:bg-orange-700 dark:hover:bg-orange-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
@@ -59,12 +54,7 @@ export default function Home() {
             🚀 Lexical智能编辑器
           </Link>
           
-          <Link
-            className="rounded-full border border-solid border-purple-600 transition-colors flex items-center justify-center bg-purple-600 text-white gap-2 hover:bg-purple-700 dark:hover:bg-purple-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/prompt-template-demo"
-          >
-            📝 参数化模板演示
-          </Link>
+
           
           <a
             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"

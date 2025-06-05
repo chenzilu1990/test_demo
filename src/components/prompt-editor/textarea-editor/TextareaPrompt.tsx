@@ -1,4 +1,4 @@
-import { ChangeEvent, useRef, useEffect } from 'react';
+import { ChangeEvent, useRef, useEffect, forwardRef } from 'react';
 import { SelectedOption } from '../types';
 
 interface TextareaPromptProps {
@@ -11,7 +11,7 @@ interface TextareaPromptProps {
   computeTextDiff: (oldText: string, newText: string) => Map<number, number>;
 }
 
-export default function TextareaPrompt({
+const TextareaPrompt = forwardRef<HTMLTextAreaElement, TextareaPromptProps>(({
   value,
   onChange,
   selectedOptions,
@@ -19,8 +19,7 @@ export default function TextareaPrompt({
   placeholder = "在这里输入您的问题或指令...",
   height = "12rem",
   computeTextDiff
-}: TextareaPromptProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+}, ref) => {
   const prevValueRef = useRef<string>(value);
   
   useEffect(() => {
@@ -88,7 +87,7 @@ export default function TextareaPrompt({
 
   return (
     <textarea
-      ref={textareaRef}
+      ref={ref}
       value={value}
       onChange={handleTextareaChange}
       className="w-full p-3 border rounded-md resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -96,4 +95,8 @@ export default function TextareaPrompt({
       style={{ height }}
     />
   );
-}
+});
+
+TextareaPrompt.displayName = 'TextareaPrompt';
+
+export default TextareaPrompt;

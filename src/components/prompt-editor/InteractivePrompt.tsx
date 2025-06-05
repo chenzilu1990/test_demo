@@ -6,6 +6,7 @@ import TemplateSelector from "./TemplateSelector";
 import OptionPanel from "./OptionPanel";
 import InteractiveContent from "./textarea-editor/InteractiveContent";
 import TextareaPrompt from "./textarea-editor/TextareaPrompt";
+import OverlayTextareaPrompt from "./textarea-editor/OverlayTextareaPrompt";
 import { BracketParameterOptions, PromptTemplate, SelectedOption } from "./types";
 import { computeTextDiff } from "./textarea-editor/TextDiffUtils";
 // import LexicalPromptEditor from "./LexicalPromptEditor";
@@ -37,7 +38,7 @@ export default function InteractivePrompt({
   placeholder = "在这里输入您的问题或指令...",
   height = "12rem",
   className = "",
-  useContentEditable = false,
+  useContentEditable = false ,
   paramTemplate,
   onGenerateMoreOptions,
   onClear,
@@ -69,7 +70,7 @@ export default function InteractivePrompt({
     Object.entries(paramTemplate.parameterOptions || {}).forEach(([param, options]) => {
       paramOptions[param] = options;
     });
-    
+    console.log("paramOptions", localBracketOptions, paramOptions);
     return { ...localBracketOptions, ...paramOptions };
   }, [localBracketOptions, paramTemplate]);
 
@@ -110,8 +111,8 @@ export default function InteractivePrompt({
     return brackets;
   };
 
-  const handleTemplateSelect = (template: string): void => {
-    onChange(template);
+  const handleTemplateSelect = (prompt: string): void => {
+    onChange(prompt);
     setSelectedTemplate("");
     setSelectedOptions([]);
   };
@@ -243,27 +244,18 @@ export default function InteractivePrompt({
           />
 
         ) : (
-          <>
-            <div className="w-full p-3 border rounded-md mb-2 min-h-16 break-words dark:bg-gray-700 dark:border-gray-600">
-              <InteractiveContent
-                value={value}
-                selectedOptions={selectedOptions}
-                brackets={brackets}
-                onBracketClick={handleBracketClick}
-                onSelectedOptionClick={handleSelectedOptionClick}
-              />
-            </div>
-            
-            <TextareaPrompt
-              value={value}
-              onChange={onChange}
-              selectedOptions={selectedOptions}
-              onSelectedOptionsChange={setSelectedOptions}
-              placeholder={placeholder}
-              height={height}
-              computeTextDiff={computeTextDiff}
-            />
-          </>
+          <OverlayTextareaPrompt
+            value={value}
+            onChange={onChange}
+            selectedOptions={selectedOptions}
+            onSelectedOptionsChange={setSelectedOptions}
+            brackets={brackets}
+            onBracketClick={handleBracketClick}
+            onSelectedOptionClick={handleSelectedOptionClick}
+            placeholder={placeholder}
+            height={height}
+            computeTextDiff={computeTextDiff}
+          />
         )}
         
         {currentBracket && (

@@ -27,6 +27,7 @@ export { ClickHandlerPlugin } from './lexical-plugins/ClickHandlerPlugin';
 
 export { useLexicalConfig, EDITOR_THEMES, EDITOR_NAMESPACES } from './lexical-hooks/useLexicalConfig';
 export { useOptionSelection, CURSOR_STRATEGIES } from './lexical-hooks/useOptionSelection';
+export { useCursorManager, CURSOR_RESTORE_STRATEGIES } from './lexical-hooks/useCursorManager';
 
 // ============================================================================
 // 类型定义

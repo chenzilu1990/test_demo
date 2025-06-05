@@ -104,6 +104,11 @@ export default function OptionPanel({
         {/* 生成更多选项区域 */}
         {onGenerateMoreOptions && parameterName && (
           <div className="mt-2 pt-2 border-t dark:border-gray-700">
+            {options.length === 0 && !isGenerating && (
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-2">
+                当前参数 "{parameterName}" 没有预设选项，请尝试生成。
+              </p>
+            )}
             {error && (
               <div className="text-xs text-red-500 mb-2 px-2">
                 {error}
@@ -127,7 +132,7 @@ export default function OptionPanel({
                   生成中...
                 </span>
               ) : (
-                `${isNearBottom ? '找不到合适的选项？' : ''} 生成更多选项`
+                options.length === 0 ? `为 "${parameterName}" 生成选项` : `${isNearBottom ? '找不到合适的选项？' : ''} 生成更多选项`
               )}
             </button>
           </div>

@@ -4,48 +4,46 @@
  * 主要功能：
  * 1. 解析提示词模板中的方括号参数 (如 [国家]、[城市] 等)
  * 2. 将方括号转换为可交互的BracketNode节点
- * 3. 智能识别外部模板更新 vs 用户输入，避免重复解析
- * 4. 支持动态方括号选项配置
+ * 3. 专注于外部模板导入时的初始解析
+ * 4. 与RealTimeParserPlugin协调工作，避免冲突
  * 
  * 使用场景：
  * - 用户选择新的提示词模板时，自动解析并渲染参数
- * - 防止用户输入时重复解析导致的光标跳动问题
+ * - 外部传入新的模板内容时进行一次性解析
  * 
  * 性能优化：
  * - 使用useRef避免不必要的状态更新
  * - 智能内容比较，只在真正需要时重新解析
  * - 开发/生产环境分离的日志输出
+ * - 避免与实时解析插件的重复处理
  */
 
 import { useEffect, useRef } from 'react';
 import { $getRoot, $createTextNode, $createParagraphNode } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { BracketNode, $createBracketNode } from '../nodes/BracketNode';
-import { BracketParameterOptions } from "../../types";
-
 
 interface TemplateParserPluginProps {
   /** 要解析的模板字符串 */
   initialValue: string;
-  /** 方括号选项配置，key为方括号内容，value为选项配置 */
-  bracketOptions: BracketParameterOptions;
 }
 
 /**
  * 模板解析插件组件
  * 负责将包含方括号的模板字符串解析为Lexical节点树
+ * 专注于外部模板导入，与实时解析插件协调工作
  */
 export function TemplateParserPlugin({ 
-  initialValue, 
-  bracketOptions
+  initialValue
 }: TemplateParserPluginProps) {
   const [editor] = useLexicalComposerContext();
   const lastParsedValueRef = useRef<string>('');
   const isInitializedRef = useRef<boolean>(false);
+  const isProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (!initialValue) return;
-
+    if (!initialValue || isProcessingRef.current) return;
+    
     // 性能优化：如果值没有变化，跳过解析
     if (initialValue === lastParsedValueRef.current) {
       return;
@@ -59,8 +57,11 @@ export function TemplateParserPlugin({
       editor.getEditorState().read(() => {
         const root = $getRoot();
         const currentContent = root.getTextContent();
-        // 如果编辑器内容已经和传入值相同，说明是用户输入导致的
-        if (currentContent === initialValue) {
+        
+        // 如果编辑器内容已经和传入值相同，说明可能是用户输入导致的
+        // 但如果传入值明显不同（例如是全新的模板），则应该更新
+        const contentSimilarity = calculateSimilarity(currentContent, initialValue);
+        if (contentSimilarity > 0.8) {
           shouldUpdate = false;
         }
       });
@@ -73,11 +74,11 @@ export function TemplateParserPlugin({
 
     // 开发环境日志
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 模板解析:', initialValue);
-      console.log('📝 可用的方括号选项:', Object.keys(bracketOptions));
+      console.log('🔄 初始模板解析:', initialValue.substring(0, 50) + (initialValue.length > 50 ? '...' : ''));
     }
     
     lastParsedValueRef.current = initialValue;
+    isProcessingRef.current = true;
 
     // 执行模板解析
     editor.update(() => {
@@ -88,7 +89,7 @@ export function TemplateParserPlugin({
       const paragraph = $createParagraphNode();
       
       // 解析模板中的方括号参数
-      const parsedNodes = parseTemplateString(initialValue, bracketOptions);
+      const parsedNodes = parseTemplateString(initialValue);
       
       // 将解析后的节点添加到段落中
       parsedNodes.forEach(node => paragraph.append(node));
@@ -98,13 +99,14 @@ export function TemplateParserPlugin({
 
       // 标记已初始化
       isInitializedRef.current = true;
+      isProcessingRef.current = false;
 
       if (process.env.NODE_ENV === 'development') {
         const bracketCount = parsedNodes.filter(node => node instanceof BracketNode).length;
-        console.log(`✅ 模板解析完成，创建了 ${bracketCount} 个方括号节点`);
+        console.log(`✅ 初始模板解析完成，创建了 ${bracketCount} 个方括号节点`);
       }
     });
-  }, [editor, initialValue, bracketOptions]);
+  }, [editor, initialValue]);
 
   return null;
 }
@@ -112,12 +114,10 @@ export function TemplateParserPlugin({
 /**
  * 解析模板字符串，将其转换为Lexical节点数组
  * @param template - 包含方括号的模板字符串
- * @param bracketOptions - 方括号选项配置
  * @returns Lexical节点数组
  */
 function parseTemplateString(
-  template: string, 
-  bracketOptions: BracketParameterOptions
+  template: string
 ) {
   const nodes = [];
   const regex = /\[(.*?)\]/g;
@@ -135,18 +135,11 @@ function parseTemplateString(
 
     // 处理方括号内容
     const bracketContent = match[1];
-    if (bracketOptions[bracketContent]) {
-      // 创建可交互的方括号节点
-      const bracketNode = $createBracketNode(
-        `[${bracketContent}]`,
-        bracketContent,
-        bracketOptions[bracketContent]
-      );
-      nodes.push(bracketNode);
-    } else {
-      // 未识别的方括号，作为普通文本处理
-      nodes.push($createTextNode(match[0]));
-    }
+    const bracketNode = $createBracketNode(
+      `[${bracketContent}]`,
+      bracketContent
+    );
+    nodes.push(bracketNode);
 
     lastIndex = match.index + match[0].length;
   }
@@ -160,4 +153,22 @@ function parseTemplateString(
   }
 
   return nodes;
+}
+
+/**
+ * 计算两个字符串的相似度
+ * @param str1 - 第一个字符串
+ * @param str2 - 第二个字符串
+ * @returns 相似度值 (0-1)
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  if (str1 === str2) return 1;
+  if (str1.length === 0 || str2.length === 0) return 0;
+  
+  // 简单的长度和字符相似度计算
+  const lengthSimilarity = 1 - Math.abs(str1.length - str2.length) / Math.max(str1.length, str2.length);
+  const commonChars = str1.split('').filter(char => str2.includes(char)).length;
+  const charSimilarity = commonChars / Math.max(str1.length, str2.length);
+  
+  return (lengthSimilarity + charSimilarity) / 2;
 } 

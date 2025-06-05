@@ -73,6 +73,16 @@ export interface ClickHandlerPluginProps {
   onSelectedValueClick: SelectedValueClickHandler;
 }
 
+/**
+ * 实时解析插件Props
+ */
+export interface RealTimeParserPluginProps {
+  /** 是否启用实时解析 */
+  enabled?: boolean;
+  /** 防抖延迟时间（毫秒） */
+  debounceMs?: number;
+}
+
 // ============================================================================
 // 事件处理接口
 // ============================================================================
@@ -243,4 +253,12 @@ export type NodeType = 'bracket' | 'selected-value' | 'text' | 'paragraph';
 // ============================================================================
 
 export type { LexicalEditor } from 'lexical';
-export type { BracketParameterOptions } from '../../types'; 
+export type { BracketParameterOptions } from '../../types';
+
+// 从光标管理器导入类型
+export type { 
+  CursorState, 
+  TransformContext, 
+  CursorRestoreStrategy,
+  CursorManagerAPI 
+} from '../lexical-hooks/useCursorManager'; 

@@ -12,12 +12,12 @@ import {
 
 export interface SerializedBracketNode extends SerializedTextNode {
   bracketType: string;
-  options: string[];
+  options?: string[];
 }
 
 export class BracketNode extends TextNode {
   __bracketType: string;
-  __options: string[];
+  __options?: string[];
 
   static getType(): string {
     return 'bracket';
@@ -35,7 +35,7 @@ export class BracketNode extends TextNode {
   constructor(
     text: string,
     bracketType: string,
-    options: string[],
+    options?: string[],
     key?: NodeKey
   ) {
     super(text, key);
@@ -55,7 +55,9 @@ export class BracketNode extends TextNode {
     element.style.outline = 'none';
     element.classList.add('bracket-node');
     element.setAttribute('data-bracket-type', this.__bracketType);
-    element.setAttribute('data-bracket-options', JSON.stringify(this.__options));
+    if (this.__options && this.__options.length > 0) {
+      element.setAttribute('data-bracket-options', JSON.stringify(this.__options));
+    }
     element.setAttribute('tabindex', '0'); // 使节点可以获得焦点
     
     // 添加hover效果
@@ -105,7 +107,7 @@ export class BracketNode extends TextNode {
     return this.__bracketType;
   }
 
-  getOptions(): string[] {
+  getOptions(): string[] | undefined {
     return this.__options;
   }
 }
@@ -113,7 +115,7 @@ export class BracketNode extends TextNode {
 export function $createBracketNode(
   text: string,
   bracketType: string,
-  options: string[]
+  options?: string[]
 ): BracketNode {
   return new BracketNode(text, bracketType, options);
 }

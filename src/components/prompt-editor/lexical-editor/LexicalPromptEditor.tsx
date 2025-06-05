@@ -39,6 +39,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 // 导入拆分后的模块
 import { TemplateParserPlugin } from './lexical-plugins/TemplateParserPlugin';
 import { ClickHandlerPlugin } from './lexical-plugins/ClickHandlerPlugin';
+import { RealTimeParserPlugin } from './lexical-plugins/RealTimeParserPlugin';
 import { useLexicalConfig } from './lexical-hooks/useLexicalConfig';
 import { useOptionSelection } from './lexical-hooks/useOptionSelection';
 import OptionPanel from '../OptionPanel';
@@ -74,24 +75,17 @@ export default function LexicalPromptEditor({
   // 钩子和状态管理
   // ========================================================================
   
-  // 创建本地状态来管理扩展后的bracketOptions
   const [localBracketOptions, setLocalBracketOptions] = useState<BracketParameterOptions>(defaultBracketOptions);
   
-  // 初始化本地bracketOptions
   useEffect(() => {
     setLocalBracketOptions(defaultBracketOptions);
   }, [defaultBracketOptions]);
   
-  // 使用本地的bracketOptions
-  const bracketOptions = useMemo(() => localBracketOptions, [localBracketOptions]);
-  
-  // 编辑器配置
   const initialConfig = useLexicalConfig({
     namespace: 'PromptEditor',
     editable: true,
   });
   
-  // 选项选择逻辑
   const {
     isShowingOptions,
     currentSelection,
@@ -99,15 +93,12 @@ export default function LexicalPromptEditor({
     handleSelectedValueClick,
     handleOptionSelect,
     closeOptionsPanel,
-  } = useOptionSelection({ bracketOptions });
+  } = useOptionSelection({ bracketOptions: localBracketOptions });
 
   // ========================================================================
   // 事件处理函数
   // ========================================================================
   
-  /**
-   * 处理选项更新的回调
-   */
   const handleOptionsUpdated = useCallback((paramName: string, updatedOptions: string[]) => {
     setLocalBracketOptions(prev => {
       const updated = {
@@ -115,7 +106,6 @@ export default function LexicalPromptEditor({
         [paramName]: updatedOptions
       };
       
-      // 通知父组件选项已更新
       if (onBracketOptionsUpdate) {
         onBracketOptionsUpdate(updated);
       }
@@ -124,17 +114,50 @@ export default function LexicalPromptEditor({
     });
   }, [onBracketOptionsUpdate]);
   
-  /**
-   * 处理编辑器内容变化
-   * 优化：使用useCallback避免不必要的重渲染
-   */
   const handleEditorChange = useCallback((editorState: EditorState, editor: LexicalEditor) => {
+    let textContent = '';
     editorState.read(() => {
       const root = $getRoot();
-      const textContent = root.getTextContent();
-      onChange(textContent);
+      textContent = root.getTextContent();
     });
-  }, [onChange]);
+
+    onChange(textContent);
+
+    // 注意：参数检测逻辑已移至RealTimeParserPlugin中处理
+    // 这里只保留通知父组件的逻辑，避免重复处理
+    const currentKnownOptions = localBracketOptions;
+    const regex = /\[(.*?)\]/g;
+    let match;
+    const detectedParams = new Set<string>();
+    while ((match = regex.exec(textContent)) !== null) {
+      if (match[1].trim() !== "") {
+        detectedParams.add(match[1]);
+      }
+    }
+
+    let newParamsFound = false;
+    const updatedOptionsFromDetection = { ...currentKnownOptions };
+
+    detectedParams.forEach(paramName => {
+      if (!currentKnownOptions.hasOwnProperty(paramName)) {
+        updatedOptionsFromDetection[paramName] = [];
+        newParamsFound = true;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`LPE: Detected new parameter "[${paramName}]" from user input.`);
+        }
+      }
+    });
+
+    if (newParamsFound) {
+      setLocalBracketOptions(updatedOptionsFromDetection);
+      if (onBracketOptionsUpdate) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`LPE: Calling onBracketOptionsUpdate for new params:`, updatedOptionsFromDetection);
+        }
+        onBracketOptionsUpdate(updatedOptionsFromDetection);
+      }
+    }
+  }, [onChange, localBracketOptions, onBracketOptionsUpdate]);
 
   /**
    * 处理点击面板外部关闭选项面板
@@ -211,10 +234,13 @@ export default function LexicalPromptEditor({
           {/* 自定义插件 */}
           <TemplateParserPlugin 
             initialValue={value} 
-            bracketOptions={bracketOptions} 
+          />
+          <RealTimeParserPlugin 
+            enabled={true}
+            debounceMs={0}
           />
           <ClickHandlerPlugin
-            bracketOptions={bracketOptions}
+            bracketOptions={localBracketOptions}
             onBracketClick={handleBracketClick}
             onSelectedValueClick={handleSelectedValueClick}
           />

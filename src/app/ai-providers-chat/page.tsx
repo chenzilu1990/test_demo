@@ -658,7 +658,7 @@ export default function AIChatPage() {
       <ChatInput 
         inputPrompt={inputPrompt}
         setInputPrompt={setInputPrompt}
-            bracketOptions={bracketOptions}
+        bracketOptions={bracketOptions}
         isImageGenerationModel={isImageGenerationModel()}
         isDallE3Model={isDallE3Model}
         isLoading={isLoading}

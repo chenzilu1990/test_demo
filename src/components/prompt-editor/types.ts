@@ -5,14 +5,6 @@ export interface PromptTemplate {
   parameterOptions?: Record<string, string[]>;
 }
 
-
-
-
-
-
-
-
-
 /**
  * 定义参数化提示词中每个参数的选项。
  * 使用Record<string, string[]>，其中key是参数名 (例如 "国家")，
@@ -20,6 +12,7 @@ export interface PromptTemplate {
  */
 export type BracketParameterOptions = Record<string, string[]>;
 
+// 参数化提示词中每个参数的选项
 export interface SelectedOption {
   id: string;           // 唯一标识符
   type: string;

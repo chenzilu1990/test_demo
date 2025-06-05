@@ -58,7 +58,7 @@ export default function InteractiveContent({
       elements.push(
         <span 
           key={`bracket-${i}`}
-          className="text-blue-500 font-medium cursor-pointer hover:bg-blue-100 px-1 rounded"
+          className="text-blue-500 font-medium cursor-pointer hover:bg-blue-100 rounded"
           onClick={() => onBracketClick(pos.content, pos.start, pos.end)}
         >
           [{pos.content}]
@@ -72,7 +72,7 @@ export default function InteractiveContent({
         elements.push(
           <span 
             key={`selected-${selectedOpt.id}`}
-            className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 px-1 rounded cursor-pointer hover:bg-green-200 dark:hover:bg-green-700"
+            className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 rounded cursor-pointer hover:bg-green-200 dark:hover:bg-green-700"
             onClick={() => onSelectedOptionClick(selectedOpt)}
             title={`点击重新选择${selectedOpt.type}`}
           >

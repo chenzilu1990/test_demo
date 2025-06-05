@@ -74,7 +74,7 @@ export function ClickHandlerPlugin({
           if (isBracketNode && $isBracketNode(lexicalNode)) {
             handleBracketNodeClick(target, lexicalNode, bracketOptions, onBracketClick, editor);
           } else if (isSelectedValueNode && $isSelectedValueNode(lexicalNode)) {
-            handleSelectedValueNodeClick(lexicalNode, onSelectedValueClick, editor);
+            handleSelectedValueNodeClick(lexicalNode, bracketOptions, onSelectedValueClick, editor);
           }
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
@@ -114,36 +114,34 @@ function handleBracketNodeClick(
   onBracketClick: (bracketType: string, options: string[], node: BracketNode, editor: LexicalEditor) => void,
   editor: LexicalEditor
 ) {
-  const bracketType = domElement.getAttribute('data-bracket-type');
+  const bracketType = lexicalNode.getBracketType();
   
-  if (bracketType && bracketOptions[bracketType]) {
-    // 选中当前节点，为显示选项面板做准备
-    lexicalNode.select();
-    
-    // 触发回调显示选项面板
-    onBracketClick(bracketType, bracketOptions[bracketType], lexicalNode, editor);
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🎯 方括号点击:', bracketType);
-    }
+  const currentParamOptions = bracketOptions[bracketType] || [];
+  
+  lexicalNode.select();
+  
+  onBracketClick(bracketType, currentParamOptions, lexicalNode, editor);
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🎯 方括号点击:', bracketType, '提供选项:', currentParamOptions);
   }
 }
 
 /**
  * 处理已选择值节点点击
  * @param lexicalNode - 被点击的已选择值节点
+ * @param bracketOptions - 方括号选项配置
  * @param onSelectedValueClick - 点击回调函数
  * @param editor - 编辑器实例
  */
 function handleSelectedValueNodeClick(
   lexicalNode: SelectedValueNode,
+  bracketOptions: BracketParameterOptions,
   onSelectedValueClick: (node: SelectedValueNode, editor: LexicalEditor) => void,
   editor: LexicalEditor
 ) {
-  // 选中当前节点
   lexicalNode.select();
   
-  // 触发回调显示选项面板（重新选择）
   onSelectedValueClick(lexicalNode, editor);
   
   if (process.env.NODE_ENV === 'development') {

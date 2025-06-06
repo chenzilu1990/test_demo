@@ -60,3 +60,6 @@ export const DEFAULT_BRACKET_FORMATS: BracketFormatConfig[] = [
   }
 ];
 
+// 导出错误相关类型
+export * from './types/errors';
+

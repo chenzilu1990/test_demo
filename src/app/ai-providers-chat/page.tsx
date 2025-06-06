@@ -45,7 +45,7 @@ export default function AIChatPage() {
   const [temperature, setTemperature] = useState<number>(0.7);
   const [maxTokens, setMaxTokens] = useState<number>(1000);
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
-  const [templates, setTemplates] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   
   // 参数化模板相关状态
@@ -55,6 +55,9 @@ export default function AIChatPage() {
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
   const [activeParamTemplate, setActiveParamTemplate] = useState<PromptTemplate | undefined>(undefined);
   const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
+
+  // 新增：侧边栏控制状态
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const isDallE3Model = useMemo(() => {
     if (!selectedProviderModel) return false;
@@ -160,7 +163,24 @@ export default function AIChatPage() {
       try {
         const parsed = JSON.parse(savedTemplates);
         if (Array.isArray(parsed)) {
-          setTemplates(parsed);
+          // 处理向后兼容性：旧数据可能是string[]格式
+          const normalizedTemplates = parsed.map((item: any) => {
+            if (typeof item === 'string') {
+              // 旧格式：字符串数组
+              return {
+                title: item.length > 30 ? item.substring(0, 30) + '...' : item,
+                prompt: item
+              } as PromptTemplate;
+            } else {
+              // 新格式：PromptTemplate对象
+              return {
+                title: item.title || (item.prompt.length > 30 ? item.prompt.substring(0, 30) + '...' : item.prompt),
+                prompt: item.prompt,
+                parameterOptions: item.parameterOptions
+              } as PromptTemplate;
+            }
+          });
+          setTemplates(normalizedTemplates);
         }
       } catch (e) {
         console.error('Failed to load saved templates:', e);
@@ -170,17 +190,22 @@ export default function AIChatPage() {
 
   // 保存模板
   const handleSaveTemplate = (content: string) => {
+    const newTemplate: PromptTemplate = {
+      title: content.length > 30 ? content.substring(0, 30) + '...' : content,
+      prompt: content
+    };
+    
     const newTemplates = [...templates];
-    if (!newTemplates.includes(content)) {
-      newTemplates.push(content);
+    if (!newTemplates.some(template => template.prompt === content)) {
+      newTemplates.push(newTemplate);
       setTemplates(newTemplates);
       localStorage.setItem('ai-chat-templates', JSON.stringify(newTemplates));
     }
   };
 
   // 使用模板
-  const handleUseTemplate = (template: string) => {
-    setInputPrompt(template);
+  const handleUseTemplate = (template: PromptTemplate) => {
+    setInputPrompt(template.prompt);
     setShowTemplates(false);
   };
 
@@ -199,7 +224,13 @@ export default function AIChatPage() {
       try {
         const parsed = JSON.parse(savedParamTemplates);
         if (Array.isArray(parsed)) {
-          setParamTemplates(parsed);
+          // 确保数据格式正确
+          const normalizedTemplates = parsed.map((template: any) => ({
+            title: template.title || 'Untitled Template',
+            prompt: template.prompt || '',
+            parameterOptions: template.parameterOptions || {}
+          } as PromptTemplate));
+          setParamTemplates(normalizedTemplates);
         }
       } catch (e) {
         console.error('Failed to load saved parametrized templates:', e);
@@ -502,171 +533,383 @@ export default function AIChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-      {/* 顶部导航栏 */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-semibold">AI 对话测试</h1>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setShowParamTemplates(!showParamTemplates)}
-              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      {/* 左侧边栏 - 模型选择和模板管理 */}
+      <div className={`${
+        sidebarCollapsed ? 'w-16' : 'w-80'
+      } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300`}>
+        
+        {/* 侧边栏头部 */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          {!sidebarCollapsed && (
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">AI 对话助手</h1>
+          )}
+            <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
+          >
+            <svg 
+              className={`w-5 h-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
             >
-              参数模板 ({paramTemplates.length})
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {!sidebarCollapsed ? (
+          <>
+            {/* 模型选择区域 */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <ModelSelector
+                selectedProviderModel={selectedProviderModel}
+                setSelectedProviderModel={setSelectedProviderModel}
+                availableModels={availableModels}
+                isImageGenerationModel={isImageGenerationModel()}
+              />
+            </div>
+
+            {/* 统一的模板管理区域 */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">提示词模板</h3>
+                  <div className="flex gap-1">
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">
+                      参数化 {paramTemplates.length}
+                    </span>
+                    <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-2 py-1 rounded-full">
+                      快捷 {templates.length}
+                    </span>
+                  </div>
+                </div>
+                
+                {paramTemplates.length === 0 && templates.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">
+                    暂无提示词模板
+                    <br />
+                    <span className="text-gray-400">开始对话后可保存常用提示词</span>
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {/* 参数化模板 */}
+                    {paramTemplates.slice(0, 2).map((template, index) => (
+                      <div
+                        key={`param-${index}`}
+                        className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded">
+                            📋 参数
+                          </span>
+                          <span className="font-medium text-sm truncate">{template.title}</span>
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                          {template.prompt}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {Object.keys(template.parameterOptions || {}).slice(0, 3).map((param) => (
+                            <span
+                              key={param}
+                              className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs"
+                            >
+                              {param}
+                            </span>
+                          ))}
+                          {Object.keys(template.parameterOptions || {}).length > 3 && (
+                            <span className="text-xs text-gray-500">+{Object.keys(template.parameterOptions || {}).length - 3}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleUseParamTemplate(template)}
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                          >
+                            使用
+                          </button>
+                          <button
+                            onClick={() => handleDeleteParamTemplate(index)}
+                            className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* 快捷模板 */}
+                    {templates.slice(0, 2).map((template, index) => (
+                      <div
+                        key={`quick-${index}`}
+                        className="p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-green-500 text-white text-xs rounded">
+                            📝 快捷
+                          </span>
+                          <span className="font-medium text-sm truncate">{template.title}</span>
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2" title={template.prompt}>
+                          {template.prompt.length > 60 ? template.prompt.substring(0, 60) + "..." : template.prompt}
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleUseTemplate(template)}
+                            className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition-colors"
+                          >
+                            使用
+                          </button>
+                          <button
+                            onClick={() => handleShowTemplateGenerator(template.prompt)}
+                            className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 transition-colors"
+                          >
+                            参数化
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTemplate(index)}
+                            className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* 查看更多按钮 */}
+                    {(paramTemplates.length > 2 || templates.length > 2) && (
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <div className="grid grid-cols-2 gap-2">
+                          {paramTemplates.length > 2 && (
+                            <button
+                              onClick={() => setShowParamTemplates(true)}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline py-1"
+                            >
+                              查看全部参数化模板 ({paramTemplates.length})
+                            </button>
+                          )}
+                          {templates.length > 2 && (
+                            <button
+                              onClick={() => setShowTemplates(true)}
+                              className="text-xs text-green-600 dark:text-green-400 hover:underline py-1"
+                            >
+                              查看全部快捷模板 ({templates.length})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 侧边栏底部操作 */}
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={handleClearConversation}
+                className="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
+              >
+                🗑️ 清空对话记录
             </button>
-            <button 
-              onClick={() => setShowTemplates(!showTemplates)}
-              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+            </div>
+          </>
+        ) : (
+          /* 收起状态的侧边栏 */
+          <div className="flex-1 flex flex-col items-center py-4 space-y-4">
+            <button
+              onClick={() => {
+                if (paramTemplates.length > 0) {
+                  setShowParamTemplates(true);
+                } else if (templates.length > 0) {
+                  setShowTemplates(true);
+                }
+              }}
+              className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
+              title="提示词模板"
             >
-              模板 ({templates.length})
+              <span className="text-lg">📋</span>
+              {(paramTemplates.length > 0 || templates.length > 0) && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {paramTemplates.length + templates.length}
+                </span>
+              )}
             </button>
-            <button 
+            <button
               onClick={handleClearConversation}
-              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+              className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="清空对话"
             >
-              清空对话
+              <span className="text-lg">🗑️</span>
             </button>
           </div>
+        )}
+      </div>
+
+      {/* 主要内容区域 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* 对话区域 - 占据大部分空间 */}
+        <div className="flex-1 p-4 min-h-0">
+          <ChatDialog
+            conversation={conversation}
+            error={error}
+            onSaveTemplate={handleSaveTemplate}
+          />
+        </div>
+
+        {/* 输入区域 - 固定在底部 */}
+        <div className="border-t border-gray-200 dark:border-gray-700">
+          <ChatInput
+            inputPrompt={inputPrompt}
+            setInputPrompt={setInputPrompt}
+            bracketOptions={bracketOptions}
+            isImageGenerationModel={isImageGenerationModel()}
+            isDallE3Model={isDallE3Model}
+            isLoading={isLoading}
+            selectedProviderModel={selectedProviderModel}
+            handleSendMessage={handleSendMessage}
+            activeParamTemplate={activeParamTemplate}
+            onGenerateMoreOptions={handleGenerateMoreOptions}
+            clearActiveTemplate={clearActiveTemplate}
+            availableModels={availableModels}
+            onModelSelect={setSelectedProviderModel}
+            templates={[...paramTemplates, ...templates]}
+          />
         </div>
       </div>
 
       {/* 参数化模板选择弹窗 */}
       {showParamTemplates && (
-        <div className="absolute top-16 right-4 z-10 w-96 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h3 className="font-medium">参数化提示词模板</h3>
-            <button onClick={() => setShowParamTemplates(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <span>&times;</span>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">📋 参数化提示词模板</h3>
+            <button
+              onClick={() => setShowParamTemplates(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+            >
+                &times;
             </button>
           </div>
-          <div className="p-2">
+            <div className="flex-1 overflow-y-auto p-4">
             {paramTemplates.length === 0 ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">暂无参数化模板</p>
-              ) : (
-              <ul className="space-y-2">
+                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                暂无参数化模板
+              </p>
+            ) : (
+                <div className="space-y-4">
                 {paramTemplates.map((template, index) => (
-                  <li key={index} className="relative p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="font-medium mb-1">{template.title}</div>
-                    <div className="text-sm mb-2 text-gray-600 dark:text-gray-300">
+                    <div
+                    key={index}
+                      className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg"
+                  >
+                      <div className="font-medium mb-2">{template.title}</div>
+                      <div className="text-sm mb-3 text-gray-600 dark:text-gray-300">
                       {template.prompt}
                     </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {Object.keys(template.parameterOptions || {}).map(param => (
-                        <span key={param} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded text-xs">
-                          {param}
-                        </span>
-                      ))}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                      {Object.keys(template.parameterOptions || {}).map(
+                        (param) => (
+                          <span
+                            key={param}
+                              className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded text-xs"
+                          >
+                            {param}
+                          </span>
+                        )
+                      )}
                     </div>
-                    <div className="flex gap-1 justify-end">
-                      <button 
+                      <div className="flex gap-2">
+                      <button
                         onClick={() => handleUseParamTemplate(template)}
-                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
-                        使用
+                          使用模板
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteParamTemplate(index)}
-                        className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                          className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                       >
                         删除
                       </button>
+                      </div>
                     </div>
-                  </li>
                 ))}
-              </ul>
+                </div>
             )}
-          </div>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
       {/* 普通模板选择弹窗 */}
       {showTemplates && (
-        <div className="absolute top-16 right-4 z-10 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h3 className="font-medium">提示词模板</h3>
-            <button onClick={() => setShowTemplates(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <span>&times;</span>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">📝 快捷提示词模板</h3>
+            <button
+              onClick={() => setShowTemplates(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+            >
+                &times;
             </button>
-            </div>
-          <div className="p-2">
+          </div>
+            <div className="flex-1 overflow-y-auto p-4">
             {templates.length === 0 ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">暂无模板</p>
+                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  暂无快捷模板
+              </p>
             ) : (
-              <ul className="space-y-1">
+                <div className="space-y-4">
                 {templates.map((template, index) => (
-                  <li key={index} className="relative group p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                    <div className="text-sm truncate mb-1" title={template}>
-                      {template.length > 50 ? template.substring(0, 50) + '...' : template}
+                    <div
+                    key={index}
+                      className="p-4 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg"
+                    >
+                      <div className="font-medium mb-2">{template.title}</div>
+                      <div className="text-sm mb-3 text-gray-600 dark:text-gray-300" title={template.prompt}>
+                        {template.prompt}
                     </div>
-                    <div className="flex gap-1">
-                      <button 
+                      <div className="flex gap-2">
+                      <button
                         onClick={() => handleUseTemplate(template)}
-                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                       >
-                        使用
+                          使用模板
                       </button>
-                      <button 
-                        onClick={() => handleShowTemplateGenerator(template)}
-                        className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                      <button
+                          onClick={() => handleShowTemplateGenerator(template.prompt)}
+                          className="px-3 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
                       >
                         生成参数模板
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteTemplate(index)}
-                        className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                          className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                       >
                         删除
                       </button>
+                      </div>
                     </div>
-                  </li>
                 ))}
-              </ul>
+                </div>
             )}
+            </div>
           </div>
         </div>
       )}
 
       {/* 模板生成器 */}
-      <TemplateGenerator 
+      <TemplateGenerator
         isOpen={showTemplateGenerator}
         onClose={() => setShowTemplateGenerator(false)}
         onSaveTemplate={handleSaveParamTemplate}
         provider={provider}
         userPrompt={selectedPrompt}
         availableModels={availableModels}
-      />
-
-      {/* 主要内容区域 */}
-      <div className="flex-1 container mx-auto px-4 py-4 flex flex-col min-h-0">
-        {/* 模型选择区域 */}
-        <ModelSelector 
-          selectedProviderModel={selectedProviderModel}
-          setSelectedProviderModel={setSelectedProviderModel}
-          availableModels={availableModels}
-          isImageGenerationModel={isImageGenerationModel()}
-        />
-
-        {/* 对话历史区域 */}
-        <ChatDialog 
-          conversation={conversation} 
-          error={error}
-          onSaveTemplate={handleSaveTemplate}
-        />
-      </div>
-
-      {/* 固定在底部的输入区域 */}
-      <ChatInput 
-        inputPrompt={inputPrompt}
-        setInputPrompt={setInputPrompt}
-        bracketOptions={bracketOptions}
-        isImageGenerationModel={isImageGenerationModel()}
-        isDallE3Model={isDallE3Model}
-        isLoading={isLoading}
-        selectedProviderModel={selectedProviderModel}
-        handleSendMessage={handleSendMessage}
-        activeParamTemplate={activeParamTemplate}
-        onGenerateMoreOptions={handleGenerateMoreOptions}
-        clearActiveTemplate={clearActiveTemplate}
       />
     </div>
   );

@@ -9,6 +9,7 @@ interface TextareaPromptProps {
   placeholder?: string;
   height?: string;
   computeTextDiff: (oldText: string, newText: string) => Map<number, number>;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
 const TextareaPrompt = forwardRef<HTMLTextAreaElement, TextareaPromptProps>(({
@@ -18,7 +19,8 @@ const TextareaPrompt = forwardRef<HTMLTextAreaElement, TextareaPromptProps>(({
   onSelectedOptionsChange,
   placeholder = "在这里输入您的问题或指令...",
   height = "12rem",
-  computeTextDiff
+  computeTextDiff,
+  onKeyDown
 }, ref) => {
   const prevValueRef = useRef<string>(value);
   
@@ -90,6 +92,7 @@ const TextareaPrompt = forwardRef<HTMLTextAreaElement, TextareaPromptProps>(({
       ref={ref}
       value={value}
       onChange={handleTextareaChange}
+      onKeyDown={onKeyDown}
       className="w-full p-3 border rounded-md resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
       placeholder={placeholder}
       style={{ height }}

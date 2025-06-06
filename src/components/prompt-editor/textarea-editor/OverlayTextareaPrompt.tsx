@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, forwardRef } from 'react';
 import { SelectedOption, BracketFormatConfig } from '../types';
 import TextareaPrompt from './TextareaPrompt';
 
@@ -13,6 +13,7 @@ interface OverlayTextareaPromptProps {
   placeholder?: string;
   height?: string;
   computeTextDiff: (oldText: string, newText: string) => Map<number, number>;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
 interface TextPosition {
@@ -22,7 +23,7 @@ interface TextPosition {
   height: number;
 }
 
-export default function OverlayTextareaPrompt({
+const OverlayTextareaPrompt = forwardRef<HTMLTextAreaElement, OverlayTextareaPromptProps>(({
   value,
   onChange,
   selectedOptions,
@@ -32,10 +33,10 @@ export default function OverlayTextareaPrompt({
   onSelectedOptionClick,
   placeholder = "在这里输入您的问题或指令...",
   height = "12rem",
-  computeTextDiff
-}: OverlayTextareaPromptProps) {
+  computeTextDiff,
+  onKeyDown
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const measureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const updateTimeoutRef = useRef<number | null>(null);
   const [overlayElements, setOverlayElements] = useState<Array<{
@@ -63,11 +64,11 @@ export default function OverlayTextareaPrompt({
 
   // 计算文本位置
   const calculateTextPosition = useCallback((start: number, end: number): TextPosition => {
-    if (!textareaRef.current) {
+    if (!ref || typeof ref === 'function' || !ref.current) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
 
-    const textarea = textareaRef.current;
+    const textarea = ref.current;
     const style = window.getComputedStyle(textarea);
     const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
     const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
@@ -99,7 +100,7 @@ export default function OverlayTextareaPrompt({
       width: selectedWidth,
       height: lineHeight
     };
-  }, [value, getTextMetrics]);
+  }, [value, getTextMetrics, ref]);
 
   // 更新覆盖元素位置（节流版本）
   const updateOverlayElements = useCallback(() => {
@@ -165,21 +166,26 @@ export default function OverlayTextareaPrompt({
 
     window.addEventListener('resize', handleResize);
     
-    const textarea = textareaRef.current;
-    if (textarea) {
+    if (ref && typeof ref !== 'function' && ref.current) {
+      const textarea = ref.current;
       textarea.addEventListener('scroll', handleScroll);
-    }
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (textarea) {
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
         textarea.removeEventListener('scroll', handleScroll);
-      }
-      if (updateTimeoutRef.current) {
-        cancelAnimationFrame(updateTimeoutRef.current);
-      }
-    };
-  }, [updateOverlayElements]);
+        if (updateTimeoutRef.current) {
+          cancelAnimationFrame(updateTimeoutRef.current);
+        }
+      };
+    } else {
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (updateTimeoutRef.current) {
+          cancelAnimationFrame(updateTimeoutRef.current);
+        }
+      };
+    }
+  }, [updateOverlayElements, ref]);
 
   // 处理覆盖层点击
   const handleOverlayClick = (element: typeof overlayElements[0]) => {
@@ -194,7 +200,7 @@ export default function OverlayTextareaPrompt({
     <div ref={containerRef} className="relative">
       {/* 原始的 TextareaPrompt 组件 */}
       <TextareaPrompt
-        ref={textareaRef}
+        ref={ref}
         value={value}
         onChange={onChange}
         selectedOptions={selectedOptions}
@@ -202,6 +208,7 @@ export default function OverlayTextareaPrompt({
         placeholder={placeholder}
         height={height}
         computeTextDiff={computeTextDiff}
+        onKeyDown={onKeyDown}
       />
 
       {/* 覆盖层 */}
@@ -217,34 +224,38 @@ export default function OverlayTextareaPrompt({
                 ? element.data.formatConfig?.className || 'text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/50'
                 : 'bg-green-100/50 dark:bg-green-800/70 text-green-800 dark:text-green-100 hover:bg-green-200 dark:hover:bg-green-700'
             }`}
-                          style={{
-                left: `${element.position.x}px`,
-                top: `${element.position.y}px`,
-                width: `${Math.max(element.position.width, 20)}px`,
-                height: `${element.position.height}px`,
-                lineHeight: `${element.position.height}px`,
-                fontSize: textareaRef.current ? window.getComputedStyle(textareaRef.current).fontSize : 'inherit',
-                fontFamily: textareaRef.current ? window.getComputedStyle(textareaRef.current).fontFamily : 'inherit',
-                fontWeight: textareaRef.current ? window.getComputedStyle(textareaRef.current).fontWeight : 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                zIndex: 10
-              }}
+            style={{
+              left: `${element.position.x}px`,
+              top: `${element.position.y}px`,
+              width: `${Math.max(element.position.width, 20)}px`,
+              height: `${element.position.height}px`,
+              lineHeight: `${element.position.height}px`,
+              fontSize: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontSize : 'inherit',
+              fontFamily: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontFamily : 'inherit',
+              fontWeight: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontWeight : 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              zIndex: 10
+            }}
             onClick={() => handleOverlayClick(element)}
             title={
               element.type === 'bracket' 
                 ? `点击选择 [${element.content}]` 
                 : `点击重新选择 ${element.data.type}`
             }
-                      >
-              {element.type === 'bracket' ? value.substring(element.start, element.end) : element.content}
-            </div>
+          >
+            {element.type === 'bracket' ? value.substring(element.start, element.end) : element.content}
+          </div>
         ))}
       </div>
     </div>
   );
-}
+});
+
+OverlayTextareaPrompt.displayName = 'OverlayTextareaPrompt';
+
+export default OverlayTextareaPrompt;

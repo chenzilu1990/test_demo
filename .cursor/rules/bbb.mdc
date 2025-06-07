@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+不区分参数化模板和快捷模板,统一的"提示词模板"概念,类型统一由ExtendedPromptTemplate定义
+如果非要区分,可以通过字段parameterOptions是否有值确定
+记住
+不区分参数化模板和快捷模板
+不区分参数化模板和快捷模板
+不区分参数化模板和快捷模板

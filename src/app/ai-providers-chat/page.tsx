@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { createProvider } from '@/ai-providers/core/providerFactory';
 import { PROVIDER_CONFIGS } from '@/ai-providers/config/providers';
 import { 
@@ -16,6 +17,8 @@ import ChatDialog from './components/ChatDialog';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
 import TemplateGenerator from './components/TemplateGenerator';
+import { loadUnifiedTemplates, addTemplate, updateTemplateUsage } from '@/app/prompt-template-settings/utils/dataMigration';
+import { ExtendedPromptTemplate, isParameterizedTemplate } from '@/app/prompt-template-settings/types';
 
 // 定义交互式提示词的选项
 const getBracketOptions = (isDallE3: boolean): BracketParameterOptions => {
@@ -35,6 +38,7 @@ const getBracketOptions = (isDallE3: boolean): BracketParameterOptions => {
 };
 
 export default function AIChatPage() {
+  const router = useRouter();
   const [selectedProviderModel, setSelectedProviderModel] = useState<string>('');
   const [provider, setProvider] = useState<AIProvider | null>(null);
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
@@ -45,11 +49,8 @@ export default function AIChatPage() {
   const [temperature, setTemperature] = useState<number>(0.7);
   const [maxTokens, setMaxTokens] = useState<number>(1000);
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
-  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [allTemplates, setAllTemplates] = useState<ExtendedPromptTemplate[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
-  
-  // 参数化模板相关状态
-  const [paramTemplates, setParamTemplates] = useState<PromptTemplate[]>([]);
   const [showParamTemplates, setShowParamTemplates] = useState(false);
   const [showTemplateGenerator, setShowTemplateGenerator] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
@@ -155,102 +156,101 @@ export default function AIChatPage() {
     return model?.capabilities.imageGeneration === true;
   };
 
-  // 保存和加载模板
+  // 从统一数据源加载所有模板
   useEffect(() => {
-    // 从localStorage加载模板
-    const savedTemplates = localStorage.getItem('ai-chat-templates');
-    if (savedTemplates) {
-      try {
-        const parsed = JSON.parse(savedTemplates);
-        if (Array.isArray(parsed)) {
-          // 处理向后兼容性：旧数据可能是string[]格式
-          const normalizedTemplates = parsed.map((item: any) => {
-            if (typeof item === 'string') {
-              // 旧格式：字符串数组
-              return {
-                title: item.length > 30 ? item.substring(0, 30) + '...' : item,
-                prompt: item
-              } as PromptTemplate;
-            } else {
-              // 新格式：PromptTemplate对象
-              return {
-                title: item.title || (item.prompt.length > 30 ? item.prompt.substring(0, 30) + '...' : item.prompt),
-                prompt: item.prompt,
-                parameterOptions: item.parameterOptions
-              } as PromptTemplate;
-            }
-          });
-          setTemplates(normalizedTemplates);
-        }
-      } catch (e) {
-        console.error('Failed to load saved templates:', e);
-      }
+    try {
+      const templates = loadUnifiedTemplates();
+      setAllTemplates(templates);
+    } catch (e) {
+      console.error('Failed to load templates:', e);
     }
   }, []);
 
-  // 保存模板
+  // 获取不含参数的模板
+  const quickTemplates = allTemplates.filter(template => !isParameterizedTemplate(template));
+  
+  // 获取含参数的模板
+  const paramTemplates = allTemplates.filter(template => isParameterizedTemplate(template));
+
+  // 保存文本模板
   const handleSaveTemplate = (content: string) => {
     const newTemplate: PromptTemplate = {
       title: content.length > 30 ? content.substring(0, 30) + '...' : content,
       prompt: content
     };
     
-    const newTemplates = [...templates];
-    if (!newTemplates.some(template => template.prompt === content)) {
-      newTemplates.push(newTemplate);
-      setTemplates(newTemplates);
-      localStorage.setItem('ai-chat-templates', JSON.stringify(newTemplates));
+    // 检查是否已存在相同内容的模板
+    if (!allTemplates.some(template => template.prompt === content)) {
+      try {
+        addTemplate(newTemplate);
+        // 重新加载模板列表
+        const updatedTemplates = loadUnifiedTemplates();
+        setAllTemplates(updatedTemplates);
+      } catch (error) {
+        console.error('Failed to save template:', error);
+      }
     }
   };
 
   // 使用模板
-  const handleUseTemplate = (template: PromptTemplate) => {
+  const handleUseTemplate = (template: ExtendedPromptTemplate) => {
     setInputPrompt(template.prompt);
     setShowTemplates(false);
+    // 记录使用统计
+    try {
+      updateTemplateUsage(template.id);
+      // 重新加载模板列表以更新统计
+      setTimeout(() => {
+        const updatedTemplates = loadUnifiedTemplates();
+        setAllTemplates(updatedTemplates);
+      }, 100);
+    } catch (error) {
+      console.error('Failed to track template usage:', error);
+    }
   };
 
-  // 删除模板
+  // 删除文本模板
   const handleDeleteTemplate = (index: number) => {
-    const newTemplates = [...templates];
-    newTemplates.splice(index, 1);
-    setTemplates(newTemplates);
-    localStorage.setItem('ai-chat-templates', JSON.stringify(newTemplates));
-  };
-
-  // 加载参数化模板
-  useEffect(() => {
-    const savedParamTemplates = localStorage.getItem('ai-chat-param-templates');
-    if (savedParamTemplates) {
+    const templateToDelete = quickTemplates[index];
+    if (templateToDelete) {
       try {
-        const parsed = JSON.parse(savedParamTemplates);
-        if (Array.isArray(parsed)) {
-          // 确保数据格式正确
-          const normalizedTemplates = parsed.map((template: any) => ({
-            title: template.title || 'Untitled Template',
-            prompt: template.prompt || '',
-            parameterOptions: template.parameterOptions || {}
-          } as PromptTemplate));
-          setParamTemplates(normalizedTemplates);
-        }
-      } catch (e) {
-        console.error('Failed to load saved parametrized templates:', e);
+        const { deleteTemplate } = require('@/app/prompt-template-settings/utils/dataMigration');
+        deleteTemplate(templateToDelete.id);
+        // 重新加载模板列表
+        const updatedTemplates = loadUnifiedTemplates();
+        setAllTemplates(updatedTemplates);
+      } catch (error) {
+        console.error('Failed to delete template:', error);
       }
     }
-  }, []);
-
-  // 保存参数化模板
-  const handleSaveParamTemplate = (template: PromptTemplate) => {
-    const newTemplates = [...paramTemplates, template];
-    setParamTemplates(newTemplates);
-    localStorage.setItem('ai-chat-param-templates', JSON.stringify(newTemplates));
   };
 
-  // 删除参数化模板
+  // 保存含参数的模板
+  const handleSaveParamTemplate = (template: PromptTemplate) => {
+    try {
+      addTemplate(template);
+      // 重新加载模板列表
+      const updatedTemplates = loadUnifiedTemplates();
+      setAllTemplates(updatedTemplates);
+    } catch (error) {
+      console.error('Failed to save param template:', error);
+    }
+  };
+
+  // 删除含参数的模板
   const handleDeleteParamTemplate = (index: number) => {
-    const newTemplates = [...paramTemplates];
-    newTemplates.splice(index, 1);
-    setParamTemplates(newTemplates);
-    localStorage.setItem('ai-chat-param-templates', JSON.stringify(newTemplates));
+    const templateToDelete = paramTemplates[index];
+    if (templateToDelete) {
+      try {
+        const { deleteTemplate } = require('@/app/prompt-template-settings/utils/dataMigration');
+        deleteTemplate(templateToDelete.id);
+        // 重新加载模板列表
+        const updatedTemplates = loadUnifiedTemplates();
+        setAllTemplates(updatedTemplates);
+      } catch (error) {
+        console.error('Failed to delete param template:', error);
+      }
+    }
   };
 
   // 显示模板生成器
@@ -259,11 +259,22 @@ export default function AIChatPage() {
     setShowTemplateGenerator(true);
   };
 
-  // 使用参数化模板
-  const handleUseParamTemplate = (template: PromptTemplate) => {
+  // 使用含参数的模板
+  const handleUseParamTemplate = (template: ExtendedPromptTemplate) => {
     setActiveParamTemplate(template);
     setInputPrompt(template.prompt);
     setShowParamTemplates(false);
+    // 记录使用统计
+    try {
+      updateTemplateUsage(template.id);
+      // 重新加载模板列表以更新统计
+      setTimeout(() => {
+        const updatedTemplates = loadUnifiedTemplates();
+        setAllTemplates(updatedTemplates);
+      }, 100);
+    } catch (error) {
+      console.error('Failed to track template usage:', error);
+    }
   };
 
   // 清除活动模板
@@ -532,6 +543,16 @@ export default function AIChatPage() {
     setError('');
   };
 
+  // 导航到AI提供商配置页面
+  const handleNavigateToProviders = () => {
+    router.push('/ai-providers');
+  };
+
+  // 导航到提示词模板设置页面
+  const handleNavigateToTemplateSettings = () => {
+    router.push('/prompt-template-settings');
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* 左侧边栏 - 模型选择和模板管理 */}
@@ -569,6 +590,7 @@ export default function AIChatPage() {
                 setSelectedProviderModel={setSelectedProviderModel}
                 availableModels={availableModels}
                 isImageGenerationModel={isImageGenerationModel()}
+                onNavigateToProviders={handleNavigateToProviders}
               />
             </div>
 
@@ -578,16 +600,13 @@ export default function AIChatPage() {
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white">提示词模板</h3>
                   <div className="flex gap-1">
-                    <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">
-                      参数化 {paramTemplates.length}
-                    </span>
-                    <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-2 py-1 rounded-full">
-                      快捷 {templates.length}
+                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
+                      共 {paramTemplates.length + quickTemplates.length} 个模板
                     </span>
                   </div>
                 </div>
                 
-                {paramTemplates.length === 0 && templates.length === 0 ? (
+                {paramTemplates.length === 0 && quickTemplates.length === 0 ? (
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">
                     暂无提示词模板
                     <br />
@@ -595,15 +614,15 @@ export default function AIChatPage() {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {/* 参数化模板 */}
+                    {/* 包含参数的模板 */}
                     {paramTemplates.slice(0, 2).map((template, index) => (
                       <div
                         key={`param-${index}`}
-                        className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg"
+                        className="p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded">
-                            📋 参数
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-500 text-white text-xs rounded">
+                            📋 含参数
                           </span>
                           <span className="font-medium text-sm truncate">{template.title}</span>
                         </div>
@@ -626,7 +645,7 @@ export default function AIChatPage() {
                         <div className="flex gap-1">
                           <button
                             onClick={() => handleUseParamTemplate(template)}
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                            className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 transition-colors"
                           >
                             使用
                           </button>
@@ -640,15 +659,15 @@ export default function AIChatPage() {
                       </div>
                     ))}
 
-                    {/* 快捷模板 */}
-                    {templates.slice(0, 2).map((template, index) => (
+                    {/* 普通模板 */}
+                    {quickTemplates.slice(0, 2).map((template, index) => (
                       <div
                         key={`quick-${index}`}
-                        className="p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg"
+                        className="p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="inline-flex items-center px-1.5 py-0.5 bg-green-500 text-white text-xs rounded">
-                            📝 快捷
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-500 text-white text-xs rounded">
+                            📝 文本
                           </span>
                           <span className="font-medium text-sm truncate">{template.title}</span>
                         </div>
@@ -658,7 +677,7 @@ export default function AIChatPage() {
                         <div className="flex gap-1">
                           <button
                             onClick={() => handleUseTemplate(template)}
-                            className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition-colors"
+                            className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 transition-colors"
                           >
                             使用
                           </button>
@@ -666,7 +685,7 @@ export default function AIChatPage() {
                             onClick={() => handleShowTemplateGenerator(template.prompt)}
                             className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 transition-colors"
                           >
-                            参数化
+                            添加参数
                           </button>
                           <button
                             onClick={() => handleDeleteTemplate(index)}
@@ -679,23 +698,23 @@ export default function AIChatPage() {
                     ))}
 
                     {/* 查看更多按钮 */}
-                    {(paramTemplates.length > 2 || templates.length > 2) && (
+                    {(paramTemplates.length > 2 || quickTemplates.length > 2) && (
                       <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                         <div className="grid grid-cols-2 gap-2">
                           {paramTemplates.length > 2 && (
                             <button
                               onClick={() => setShowParamTemplates(true)}
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline py-1"
+                              className="text-xs text-gray-600 dark:text-gray-400 hover:underline py-1"
                             >
-                              查看全部参数化模板 ({paramTemplates.length})
+                              查看含参数模板 ({paramTemplates.length})
                             </button>
                           )}
-                          {templates.length > 2 && (
+                          {quickTemplates.length > 2 && (
                             <button
                               onClick={() => setShowTemplates(true)}
-                              className="text-xs text-green-600 dark:text-green-400 hover:underline py-1"
+                              className="text-xs text-gray-600 dark:text-gray-400 hover:underline py-1"
                             >
-                              查看全部快捷模板 ({templates.length})
+                              查看文本模板 ({quickTemplates.length})
                             </button>
                           )}
                         </div>
@@ -723,7 +742,7 @@ export default function AIChatPage() {
               onClick={() => {
                 if (paramTemplates.length > 0) {
                   setShowParamTemplates(true);
-                } else if (templates.length > 0) {
+                } else if (quickTemplates.length > 0) {
                   setShowTemplates(true);
                 }
               }}
@@ -731,9 +750,9 @@ export default function AIChatPage() {
               title="提示词模板"
             >
               <span className="text-lg">📋</span>
-              {(paramTemplates.length > 0 || templates.length > 0) && (
+              {(paramTemplates.length > 0 || quickTemplates.length > 0) && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {paramTemplates.length + templates.length}
+                  {paramTemplates.length + quickTemplates.length}
                 </span>
               )}
             </button>
@@ -775,17 +794,19 @@ export default function AIChatPage() {
             clearActiveTemplate={clearActiveTemplate}
             availableModels={availableModels}
             onModelSelect={setSelectedProviderModel}
-            templates={[...paramTemplates, ...templates]}
+            templates={[...paramTemplates, ...quickTemplates]}
+            onNavigateToProviders={handleNavigateToProviders}
+            onNavigateToTemplateSettings={handleNavigateToTemplateSettings}
           />
         </div>
       </div>
 
-      {/* 参数化模板选择弹窗 */}
+      {/* 含参数模板选择弹窗 */}
       {showParamTemplates && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="text-lg font-semibold">📋 参数化提示词模板</h3>
+              <h3 className="text-lg font-semibold">📋 含参数的提示词模板</h3>
             <button
               onClick={() => setShowParamTemplates(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
@@ -796,7 +817,7 @@ export default function AIChatPage() {
             <div className="flex-1 overflow-y-auto p-4">
             {paramTemplates.length === 0 ? (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                暂无参数化模板
+                暂无含参数的模板
               </p>
             ) : (
                 <div className="space-y-4">
@@ -844,12 +865,12 @@ export default function AIChatPage() {
         </div>
       )}
 
-      {/* 普通模板选择弹窗 */}
+      {/* 文本模板选择弹窗 */}
       {showTemplates && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="text-lg font-semibold">📝 快捷提示词模板</h3>
+              <h3 className="text-lg font-semibold">📝 文本提示词模板</h3>
             <button
               onClick={() => setShowTemplates(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
@@ -858,13 +879,13 @@ export default function AIChatPage() {
             </button>
           </div>
             <div className="flex-1 overflow-y-auto p-4">
-            {templates.length === 0 ? (
+            {quickTemplates.length === 0 ? (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                  暂无快捷模板
+                  暂无文本模板
               </p>
             ) : (
                 <div className="space-y-4">
-                {templates.map((template, index) => (
+                {quickTemplates.map((template, index) => (
                     <div
                     key={index}
                       className="p-4 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg"
@@ -884,7 +905,7 @@ export default function AIChatPage() {
                           onClick={() => handleShowTemplateGenerator(template.prompt)}
                           className="px-3 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
                       >
-                        生成参数模板
+                        添加参数
                       </button>
                       <button
                         onClick={() => handleDeleteTemplate(index)}

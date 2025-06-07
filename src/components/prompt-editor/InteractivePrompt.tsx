@@ -46,6 +46,8 @@ export interface InteractivePromptProps {
   selectedProviderModel?: string;
   onModelSelect?: (modelId: string) => void;
   isImageGenerationModel?: boolean;
+  onNavigateToProviders?: () => void; // 新增：导航到提供商页面的回调
+  onNavigateToTemplateSettings?: () => void; // 新增：导航到提示词模板设置页面的回调
 }
 
 export default function InteractivePrompt({
@@ -69,7 +71,9 @@ export default function InteractivePrompt({
   availableModels = [],
   selectedProviderModel = "",
   onModelSelect,
-  isImageGenerationModel = false
+  isImageGenerationModel = false,
+  onNavigateToProviders,
+  onNavigateToTemplateSettings
 }: InteractivePromptProps) {
   // 错误处理
   const { 
@@ -541,6 +545,26 @@ export default function InteractivePrompt({
                   没有可用的模型
                 </div>
               )}
+              
+              {/* 添加模型选项 */}
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                <div
+                  className="px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer rounded text-sm transition-colors duration-150 flex items-center gap-2 text-blue-600 dark:text-blue-400"
+                  onClick={() => {
+                    hidePopupMenu();
+                    // 调用导航回调
+                    onNavigateToProviders?.();
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>添加新模型</span>
+                  <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
               <button
@@ -600,6 +624,25 @@ export default function InteractivePrompt({
                   没有可用的模板
                 </div>
               )}
+
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                <div
+                  className="px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer rounded text-sm transition-colors duration-150 flex items-center gap-2 text-blue-600 dark:text-blue-400"
+                  onClick={() => {
+                    hidePopupMenu();
+                    // 调用导航回调
+                    onNavigateToTemplateSettings?.();
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>添加提示词模板</span>
+                  <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
               <button

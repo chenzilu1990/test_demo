@@ -18,6 +18,8 @@ interface ChatInputProps {
   availableModels?: ModelOption[];
   onModelSelect?: (modelId: string) => void;
   templates?: PromptTemplate[];
+  onNavigateToProviders?: () => void;
+  onNavigateToTemplateSettings?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = memo(({
@@ -34,7 +36,9 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
   clearActiveTemplate,
   availableModels = [],
   onModelSelect,
-  templates = []
+  templates = [],
+  onNavigateToProviders,
+  onNavigateToTemplateSettings
 }) => {
   const handleInputChange = useCallback((value: string) => {
     setInputPrompt(value);
@@ -76,6 +80,8 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
           selectedProviderModel={selectedProviderModel}
           onModelSelect={onModelSelect}
           isImageGenerationModel={isImageGenerationModel}
+          onNavigateToProviders={onNavigateToProviders}
+          onNavigateToTemplateSettings={onNavigateToTemplateSettings}
         />
 
         <div className="mt-3 flex justify-between items-center">

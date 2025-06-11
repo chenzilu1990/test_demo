@@ -19,7 +19,10 @@ import {
 import TagDisplay from './components/TagDisplay';
 import TagFilter from './components/TagFilter';
 import ToolBar from './components/ToolBar';
+import { ImportModal, ExportModal } from './components/ImportExportModal';
+import { UrlImportModal } from './components/UrlImportModal';
 import { getTagsByIds } from './utils/tagManager';
+import { exportAllTemplates, downloadFile, ImportResult } from './utils/importExport';
 
 export default function PromptTemplateSettingsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ExtendedPromptTemplate | null>(null);
@@ -33,6 +36,11 @@ export default function PromptTemplateSettingsPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'lastUsedAt' });
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]); // 标签筛选状态
+  
+  // 导入/导出状态
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showUrlImportModal, setShowUrlImportModal] = useState(false);
 
   // 生成唯一ID
   const generateId = () => {
@@ -322,6 +330,53 @@ export default function PromptTemplateSettingsPage() {
     saveSearchHistory([]);
   };
 
+  // 处理导出全部模板
+  const handleExportAll = () => {
+    setShowExportModal(true);
+  };
+
+  // 处理导入模板
+  const handleImport = () => {
+    setShowImportModal(true);
+  };
+
+  const handleImportFromUrl = () => {
+    setShowUrlImportModal(true);
+  };
+
+  // 执行导出操作
+  const executeExport = () => {
+    try {
+      const exportData = exportAllTemplates();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `prompt-templates-export-${timestamp}.json`;
+      downloadFile(exportData, filename);
+      alert(`成功导出 ${templates.length} 个模板！`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('导出失败，请重试');
+    }
+  };
+
+  // 处理导入完成
+  const handleImportComplete = (result: ImportResult) => {
+    if (result.success) {
+      // 重新加载模板列表
+      loadTemplates();
+      
+      // 显示导入结果
+      let message = result.message;
+      if (result.errors.length > 0) {
+        message += '\n\n错误详情:\n' + result.errors.join('\n');
+      }
+      alert(message);
+    } else {
+      // 显示错误信息
+      const errorMessage = result.message + '\n\n错误详情:\n' + result.errors.join('\n');
+      alert(errorMessage);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* 页面头部 */}
@@ -359,6 +414,9 @@ export default function PromptTemplateSettingsPage() {
         onCreateNew={handleCreateNew}
         onRefresh={loadTemplates}
         isLoading={isLoading}
+        onExportAll={handleExportAll}
+        onImport={handleImport}
+        onImportFromUrl={handleImportFromUrl}
         templateCount={templates.length}
         filteredCount={sortedTemplates.length}
       />
@@ -523,6 +581,28 @@ export default function PromptTemplateSettingsPage() {
           </div>
         </div>
       )}
+
+      {/* 导入模态框 */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={handleImportComplete}
+      />
+
+      {/* 从URL导入模态框 */}
+      <UrlImportModal
+        isOpen={showUrlImportModal}
+        onClose={() => setShowUrlImportModal(false)}
+        onImportComplete={handleImportComplete}
+      />
+
+      {/* 导出模态框 */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={executeExport}
+        templateCount={templates.length}
+      />
     </div>
   );
 } 

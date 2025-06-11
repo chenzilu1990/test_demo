@@ -93,7 +93,7 @@ const TextareaPrompt = forwardRef<HTMLTextAreaElement, TextareaPromptProps>(({
       value={value}
       onChange={handleTextareaChange}
       onKeyDown={onKeyDown}
-      className="w-full p-3 border rounded-md resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      className="w-full  border rounded-md resize-none dark:bg-gray-700 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
       placeholder={placeholder}
       style={{ height }}
     />

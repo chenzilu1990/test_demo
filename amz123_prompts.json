@@ -1,0 +1,76 @@
+{
+  "source": "AMZ123跨境卖家导航",
+  "url": "https://www.amz123.com/tools-prompt",
+  "categories": {
+    "跨境电商": {
+      "市场调研": [
+        {
+          "title": "商品洞察",
+          "prompt": "请帮我分析在{country}平台上消费者对{product}的洞察，包括用户的特征、产品使用场景，用户的问题和需求，以及未满足的需求。这些分析结果可以用于产品创新、创建或优化Listing等方面。",
+          "parameters": ["country", "product"],
+          "tags": ["市场调研", "消费者分析", "产品洞察"]
+        },
+        {
+          "title": "消费者行为预测",
+          "prompt": "我想知道你对{country}市场{product}类别消费者行为的预测分析，包括购买决策因素、消费趋势、价格敏感性等特征。",
+          "parameters": ["country", "product"],
+          "tags": ["市场调研", "消费者行为", "趋势预测"]
+        }
+      ],
+      "产品运营": [
+        {
+          "title": "亚马逊listing生成",
+          "prompt": "作为亚马逊运营专家，请模仿这个竞对亚马逊产品介绍{competitor_description}。产品名称是{product_name}，产品品牌是{brand}，产品卖点是{selling_points}，产品核心关键词是{core_keywords}。写出亚马逊title，并要求标题中包含客户最关心的3个卖点、2个以上主要适应场景和主要的适用人群；写出7条详细的bullet points，并要求bullet points内容中包含产品核心关键词；写出product description，并要求product description中包含产品重要关键词。",
+          "parameters": ["competitor_description", "product_name", "brand", "selling_points", "core_keywords"],
+          "tags": ["产品运营", "亚马逊", "listing优化"]
+        },
+        {
+          "title": "亚马逊5点描述优化",
+          "prompt": "你是一名资深的亚马逊卖家，你有着很强的逻辑与理解能力，请你根据我如下的输入进行亚马逊五点描述的编写。注意：必须把核心关键词都埋入到五点描述中；若输入商品描述不为空，编写内容则仿写输入的商品描述；若输入商品描述为空，则要明确划分五点；输出的内容只保存编写的五点描述。输入内容:商品名称是：{product_name}；商品描述是：{product_description}；核心关键词是：{core_keywords}。输出请用{language}。",
+          "parameters": ["product_name", "product_description", "core_keywords", "language"],
+          "tags": ["产品运营", "亚马逊", "描述优化"]
+        }
+      ],
+      "SEO优化": [
+        {
+          "title": "亚马逊标题优化",
+          "prompt": "高相关核心热词和高埋词率，优化商品标题和描述，提高搜索排名，同时使用简洁明了的语言突出商品的独特性。产品核心关键词：{core_keywords}，目标市场：{target_market}。",
+          "parameters": ["core_keywords", "target_market"],
+          "tags": ["SEO优化", "标题优化", "搜索排名"]
+        },
+        {
+          "title": "爆品标题写作专家",
+          "prompt": "我想让你作为一位爆品标题写作专家，根据产品的核心关键词生成一个150-200字符的亚马逊标题，注意要求植入该核心产品相关的热点流行词，制作出非常吸引人购买的标题。产品的核心关键词是：{core_keywords}。请使用{language}回答，给出10条回复，同时确保产品的核心关键词内容所有都完全出现在标题中。",
+          "parameters": ["core_keywords", "language"],
+          "tags": ["SEO优化", "标题优化", "关键词优化"]
+        }
+      ]
+    }
+  },
+  "template_structure": {
+    "title": "模板标题",
+    "prompt": "提示词内容，使用{parameter}格式标记参数",
+    "parameters": ["参数列表"],
+    "tags": ["标签列表"],
+    "category": "所属分类",
+    "subcategory": "子分类"
+  },
+  "available_categories": [
+    "市场调研",
+    "品牌建设", 
+    "运营售后",
+    "产品运营",
+    "供应链管理",
+    "物流仓储",
+    "SEO优化",
+    "营销推广",
+    "语言翻译"
+  ],
+  "metadata": {
+    "extraction_date": "2024-12-27",
+    "total_prompts": 6,
+    "language": "中文",
+    "source_verified": true,
+    "notes": "从AMZ123网站提取的跨境电商ChatGPT提示词，已转换为标准化JSON格式"
+  }
+} 

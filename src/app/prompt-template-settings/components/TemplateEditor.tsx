@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PromptTemplate } from '@/components/prompt-editor/types';
 import { ExtendedPromptTemplate } from '../types';
 import TagSelector from './TagSelector';
 import { createDefaultTags } from '../utils/tagManager';
+import OverlayTextareaPrompt from '@/components/prompt-editor/textarea-editor/OverlayTextareaPrompt';
 
 interface TemplateEditorProps {
   template?: ExtendedPromptTemplate | null;
@@ -24,6 +25,8 @@ export default function TemplateEditor({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [selectionInfo, setSelectionInfo] = useState<{ rect: DOMRect; start: number; end: number } | null>(null);
 
   // 初始化表单数据
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function TemplateEditor({
 
   // 自动检测参数
   const detectParameters = (text: string) => {
-    const regex = /\[(.*?)\]/g;
+    const regex = /\{\{(.*?)\}\}/g;
     const detectedParams = new Set<string>();
     let match;
 
@@ -106,6 +109,32 @@ export default function TemplateEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt]);
+
+  const handleSelectionChange = () => {
+    if (textareaRef.current) {
+      const { selectionStart, selectionEnd } = textareaRef.current;
+      if (selectionStart !== selectionEnd) {
+        const nativeSelection = window.getSelection();
+        if (nativeSelection && nativeSelection.rangeCount > 0) {
+          const range = nativeSelection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          setSelectionInfo({ rect, start: selectionStart, end: selectionEnd });
+        }
+      } else {
+        setSelectionInfo(null);
+      }
+    }
+  };
+
+  const setAsParameter = () => {
+    if (selectionInfo) {
+      const { start, end } = selectionInfo;
+      const selectedText = prompt.substring(start, end);
+      const newPrompt = `${prompt.substring(0, start)}{{${selectedText}}}${prompt.substring(end)}`;
+      setPrompt(newPrompt);
+      setSelectionInfo(null);
+    }
+  };
 
   // 表单验证
   const validateForm = () => {
@@ -250,24 +279,55 @@ export default function TemplateEditor({
           {/* 移除模板类型选择，系统自动根据内容检测参数 */}
 
           {/* 模板内容 */}
-          <div>
+          <div className="relative" onMouseUp={handleSelectionChange} onKeyUp={handleSelectionChange}>
             <label className="block text-sm font-medium mb-2">
               模板内容 <span className="text-red-500">*</span>
             </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="输入模板内容，如需参数请使用 [参数名] 格式，例如：我的目标市场是[国家]，产品类型是[产品类型]..."
-              rows={8}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none ${
-                errors.prompt ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
+            <OverlayTextareaPrompt
+                ref={textareaRef}
+                value={prompt}
+                onChange={setPrompt}
+                onSelectedOptionsChange={() => {}}
+                selectedOptions={[]}
+                brackets={
+                    detectParameters(prompt).map(p => {
+                        const start = prompt.indexOf(`{{${p}}}`);
+                        return {
+                            content: p,
+                            start: start,
+                            end: start + p.length + 4,
+                        }
+                    })
+                }
+                onBracketClick={() => {}}
+                onSelectedOptionClick={() => {}}
+                height="12rem"
+                computeTextDiff={(old,_new) => new Map()}
+                onKeyDown={() => {}}
             />
+            {!prompt && (
+              <div className="absolute top-12 left-4 text-gray-400 pointer-events-none">
+                输入模板内容, 例如：我的目标市场是 [国家]，产品类型是 [产品类型]...
+              </div>
+            )}
+            {selectionInfo && textareaRef.current && (
+              <button
+                onClick={setAsParameter}
+                className="absolute z-10 bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm shadow-lg hover:bg-blue-600 transition-all duration-150"
+                style={{
+                  top: `${selectionInfo.rect.top - textareaRef.current.getBoundingClientRect().top - 40}px`,
+                  left: `${selectionInfo.rect.left - textareaRef.current.getBoundingClientRect().left}px`,
+                }}
+              >
+                设为参数
+              </button>
+            )}
+            
             {errors.prompt && (
               <p className="mt-1 text-sm text-red-500">{errors.prompt}</p>
             )}
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              💡 提示：使用方括号 [参数名] 来定义可变参数，系统会自动识别并创建参数设置
+              💡 提示：选中文字即可设为参数，或使用 `[参数名]` 来定义可变参数
             </p>
           </div>
 

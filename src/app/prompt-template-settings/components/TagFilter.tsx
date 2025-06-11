@@ -19,6 +19,7 @@ export default function TagFilter({
   // 加载所有标签
   useEffect(() => {
     const tags = loadTags();
+    console.log(tags);
     setAllTags(tags);
   }, []);
 
@@ -26,8 +27,8 @@ export default function TagFilter({
   const usedTags = allTags.filter(tag => templateTags.includes(tag.id));
 
   // 显示的标签（收起时显示前5个，展开时显示全部）
-  const displayTags = isExpanded ? usedTags : usedTags.slice(0, 10);
-  const hasMoreTags = usedTags.length > 10;
+  const displayTags = isExpanded ? usedTags : usedTags.slice(0, 15);
+  const hasMoreTags = usedTags.length > 15;
 
   if (usedTags.length === 0) {
     return null; // 如果没有使用的标签，不显示筛选器

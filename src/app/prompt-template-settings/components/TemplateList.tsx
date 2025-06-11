@@ -105,30 +105,13 @@ export default function TemplateList({
                 <div className="mb-3">
                   <TagDisplay
                     tags={getTagsByIds(template.tags)}
-                    maxDisplay={3}
+                    maxDisplay={5}
                     size="sm"
                   />
                 </div>
               )}
 
-              {/* 参数信息 */}
-              {isParametrized && (
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {Object.keys(template.parameterOptions || {}).slice(0, 3).map((param) => (
-                    <span
-                      key={param}
-                      className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs"
-                    >
-                      {param}
-                    </span>
-                  ))}
-                  {Object.keys(template.parameterOptions || {}).length > 3 && (
-                    <span className="text-xs text-gray-500">
-                      +{Object.keys(template.parameterOptions || {}).length - 3} 个参数
-                    </span>
-                  )}
-                </div>
-              )}
+
             </div>
 
             {/* 模板底部信息 */}

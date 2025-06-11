@@ -62,7 +62,7 @@ const OverlayTextareaPrompt = forwardRef<HTMLTextAreaElement, OverlayTextareaPro
     return { width: 0 };
   }, []);
 
-  // 计算文本位置
+  // 计算文本位置（考虑自动换行）
   const calculateTextPosition = useCallback((start: number, end: number): TextPosition => {
     if (!ref || typeof ref === 'function' || !ref.current) {
       return { x: 0, y: 0, width: 0, height: 0 };
@@ -76,28 +76,176 @@ const OverlayTextareaPrompt = forwardRef<HTMLTextAreaElement, OverlayTextareaPro
     const paddingTop = parseFloat(style.paddingTop) || 0;
     const borderTopWidth = parseFloat(style.borderTopWidth) || 0;
     const borderLeftWidth = parseFloat(style.borderLeftWidth) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const borderRightWidth = parseFloat(style.borderRightWidth) || 0;
 
     // 获取滚动位置
     const scrollTop = textarea.scrollTop;
     const scrollLeft = textarea.scrollLeft;
 
+    // 计算textarea的实际可用宽度
+    const availableWidth = textarea.clientWidth - paddingLeft - paddingRight - borderLeftWidth - borderRightWidth;
+    
     // 获取文本内容到指定位置
     const textBeforeStart = value.substring(0, start);
     const selectedText = value.substring(start, end);
 
-    // 计算行数和每行内容
-    const lines = textBeforeStart.split('\n');
-    const currentLine = lines.length - 1;
-    const textInCurrentLine = lines[lines.length - 1];
+    // 模拟文本布局，考虑自动换行
+    const simulateTextLayout = (text: string) => {
+      const lines: string[] = [];
+      let currentLine = '';
+      let currentLineWidth = 0;
+      
+      // 获取CSS样式以确定换行行为
+      const wordBreak = style.wordBreak || 'normal';
+      const whiteSpace = style.whiteSpace || 'pre-wrap';
+      const wordWrap = style.wordWrap || style.overflowWrap || 'normal';
+      
+      // 按硬换行分割文本
+      const paragraphs = text.split('\n');
+      
+      for (let i = 0; i < paragraphs.length; i++) {
+        const paragraph = paragraphs[i];
+        
+        if (i > 0) {
+          // 遇到硬换行，结束当前行
+          lines.push(currentLine);
+          currentLine = '';
+          currentLineWidth = 0;
+        }
+        
+        // 如果whiteSpace是nowrap，不进行自动换行
+        if (whiteSpace === 'nowrap' || whiteSpace === 'pre') {
+          currentLine = paragraph;
+          continue;
+        }
+        
+        // 处理段落中的文本，考虑自动换行
+        if (wordBreak === 'break-all') {
+          // 按字符分割，任意位置都可以换行
+          for (let k = 0; k < paragraph.length; k++) {
+            const char = paragraph[k];
+            const charWidth = getTextMetrics(char, font).width;
+            
+            if (currentLineWidth + charWidth <= availableWidth) {
+              currentLine += char;
+              currentLineWidth += charWidth;
+            } else {
+              lines.push(currentLine);
+              currentLine = char;
+              currentLineWidth = charWidth;
+            }
+          }
+        } else {
+          // 按单词分割（默认行为）
+          const words = paragraph.split(' ');
+          
+          for (let j = 0; j < words.length; j++) {
+            const word = words[j];
+            const wordWidth = getTextMetrics(word, font).width;
+            const spaceWidth = j > 0 ? getTextMetrics(' ', font).width : 0;
+            
+            // 检查是否需要换行
+            const totalWidth = currentLineWidth + spaceWidth + wordWidth;
+            
+            if (currentLine === '' || totalWidth <= availableWidth) {
+              // 可以添加到当前行
+              if (currentLine !== '') {
+                currentLine += ' ';
+                currentLineWidth += spaceWidth;
+              }
+              currentLine += word;
+              currentLineWidth += wordWidth;
+            } else {
+              // 需要换行
+              if (wordWidth > availableWidth && wordWrap === 'break-word') {
+                // 单词太长，需要强制断行
+                lines.push(currentLine);
+                
+                // 将长单词按字符分割
+                let remainingWord = word;
+                while (remainingWord.length > 0) {
+                  let lineChars = '';
+                  let lineWidth = 0;
+                  
+                  for (let k = 0; k < remainingWord.length; k++) {
+                    const char = remainingWord[k];
+                    const charWidth = getTextMetrics(char, font).width;
+                    
+                    if (lineWidth + charWidth <= availableWidth) {
+                      lineChars += char;
+                      lineWidth += charWidth;
+                    } else {
+                      break;
+                    }
+                  }
+                  
+                  if (lineChars.length === 0) {
+                    // 连一个字符都放不下，至少放一个字符
+                    lineChars = remainingWord[0];
+                    remainingWord = remainingWord.slice(1);
+                  } else {
+                    remainingWord = remainingWord.slice(lineChars.length);
+                  }
+                  
+                  if (remainingWord.length === 0) {
+                    currentLine = lineChars;
+                    currentLineWidth = getTextMetrics(lineChars, font).width;
+                  } else {
+                    lines.push(lineChars);
+                  }
+                }
+              } else {
+                // 正常换行
+                lines.push(currentLine);
+                currentLine = word;
+                currentLineWidth = wordWidth;
+              }
+            }
+          }
+        }
+      }
+      
+      // 添加最后一行
+      if (currentLine !== '' || text.endsWith('\n')) {
+        lines.push(currentLine);
+      }
+      
+      return lines;
+    };
 
-    // 计算 x 位置（当前行的文本宽度）
-    const textWidth = getTextMetrics(textInCurrentLine, font).width;
-    const selectedWidth = getTextMetrics(selectedText, font).width;
+    // 模拟文本布局到start位置
+    const layoutLines = simulateTextLayout(textBeforeStart);
+    
+    // 计算start位置的坐标
+    const startLine = Math.max(0, layoutLines.length - 1);
+    const textInStartLine = layoutLines[startLine] || '';
+    const startX = getTextMetrics(textInStartLine, font).width;
+
+    // 计算选中文本的宽度
+    // 需要考虑选中文本可能跨行的情况
+    let selectedWidth = 0;
+    if (selectedText.includes('\n') || startX + getTextMetrics(selectedText, font).width > availableWidth) {
+      // 选中文本跨行或者超出当前行宽度，需要特殊处理
+      const selectionLines = simulateTextLayout(value.substring(0, end));
+      const endLine = Math.max(0, selectionLines.length - 1);
+      
+      if (startLine === endLine) {
+        // 在同一行内
+        selectedWidth = getTextMetrics(selectedText, font).width;
+      } else {
+        // 跨行选择，使用第一行的剩余宽度
+        const remainingWidth = availableWidth - startX;
+        selectedWidth = Math.min(remainingWidth, getTextMetrics(selectedText, font).width);
+      }
+    } else {
+      selectedWidth = getTextMetrics(selectedText, font).width;
+    }
 
     return {
-      x: paddingLeft + borderLeftWidth + textWidth - scrollLeft,
-      y: paddingTop + borderTopWidth + currentLine * lineHeight - scrollTop,
-      width: selectedWidth,
+      x: paddingLeft + borderLeftWidth + startX - scrollLeft,
+      y: paddingTop + borderTopWidth + startLine * lineHeight - scrollTop,
+      width: Math.max(selectedWidth, 20), // 确保最小宽度
       height: lineHeight
     };
   }, [value, getTextMetrics, ref]);

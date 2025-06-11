@@ -11,6 +11,7 @@ export const loadTags = (): TemplateTag[] => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) {
+        console.log(parsed);
         return parsed.map(tag => ({
           ...tag,
           createdAt: new Date(tag.createdAt)

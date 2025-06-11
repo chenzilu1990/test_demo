@@ -361,44 +361,92 @@ const OverlayTextareaPrompt = forwardRef<HTMLTextAreaElement, OverlayTextareaPro
 
       {/* 覆盖层 */}
       <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{ 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
+          // 确保覆盖层边界与textarea完全一致
+          borderRadius: ref && typeof ref !== 'function' && ref.current 
+            ? window.getComputedStyle(ref.current).borderRadius 
+            : 'inherit',
+          // 考虑滚动条占用的空间
+          paddingRight: ref && typeof ref !== 'function' && ref.current && ref.current.scrollHeight > ref.current.clientHeight
+            ? '0px' // 有垂直滚动条时不需要额外padding
+            : '0px'
+        }}
       >
-        {overlayElements.map((element) => (
-          <div
-            key={element.id}
-            className={`absolute pointer-events-auto cursor-pointer rounded-sm transition-all duration-150 ${
-              element.type === 'bracket'
-                ? element.data.formatConfig?.className || 'text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/50'
-                : 'bg-green-100/50 dark:bg-green-800/70 text-green-800 dark:text-green-100 hover:bg-green-200 dark:hover:bg-green-700'
-            }`}
-            style={{
-              left: `${element.position.x}px`,
-              top: `${element.position.y}px`,
-              width: `${Math.max(element.position.width, 20)}px`,
-              height: `${element.position.height}px`,
-              lineHeight: `${element.position.height}px`,
-              fontSize: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontSize : 'inherit',
-              fontFamily: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontFamily : 'inherit',
-              fontWeight: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontWeight : 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              zIndex: 10
-            }}
-            onClick={() => handleOverlayClick(element)}
-            title={
-              element.type === 'bracket' 
-                ? `点击选择 [${element.content}]` 
-                : `点击重新选择 ${element.data.type}`
-            }
-          >
-            {element.type === 'bracket' ? value.substring(element.start, element.end) : element.content}
-          </div>
-        ))}
+        {overlayElements
+          .filter((element) => {
+            // 过滤掉完全超出可视区域的元素
+            if (!ref || typeof ref === 'function' || !ref.current) return false;
+            
+            const textarea = ref.current;
+            const textareaRect = textarea.getBoundingClientRect();
+            const containerRect = containerRef.current?.getBoundingClientRect();
+            
+            if (!containerRect) return false;
+            
+            // 计算相对于容器的位置
+            const relativeX = element.position.x;
+            const relativeY = element.position.y;
+            
+            // 检查是否在可视区域内（考虑一些容差）
+            const isVisible = 
+              relativeX > -element.position.width && // 左边界
+              relativeX < textarea.clientWidth && // 右边界
+              relativeY > -element.position.height && // 上边界
+              relativeY < textarea.clientHeight; // 下边界
+            
+            return isVisible;
+          })
+          .map((element) => {
+            // 计算实际显示的宽度（可能被右边界截断）
+            const maxWidth = ref && typeof ref !== 'function' && ref.current 
+              ? Math.max(0, ref.current.clientWidth - element.position.x)
+              : element.position.width;
+            
+            const displayWidth = Math.min(element.position.width, maxWidth);
+            
+            return (
+              <div
+                key={element.id}
+                className={`absolute pointer-events-auto cursor-pointer rounded-sm transition-all duration-150 ${
+                  element.type === 'bracket'
+                    ? element.data.formatConfig?.className || 'text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/50'
+                    : 'bg-green-100/50 dark:bg-green-800/70 text-green-800 dark:text-green-100 hover:bg-green-200 dark:hover:bg-green-700'
+                }`}
+                style={{
+                  left: `${Math.max(0, element.position.x)}px`,
+                  top: `${element.position.y}px`,
+                  width: `${Math.max(displayWidth, 20)}px`,
+                  height: `${element.position.height}px`,
+                  lineHeight: `${element.position.height}px`,
+                  fontSize: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontSize : 'inherit',
+                  fontFamily: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontFamily : 'inherit',
+                  fontWeight: ref && typeof ref !== 'function' && ref.current ? window.getComputedStyle(ref.current).fontWeight : 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  zIndex: 10,
+                  // 确保元素不会显示在负坐标位置
+                  visibility: element.position.x < 0 || element.position.y < 0 ? 'hidden' : 'visible'
+                }}
+                onClick={() => handleOverlayClick(element)}
+                title={
+                  element.type === 'bracket' 
+                    ? `点击选择 [${element.content}]` 
+                    : `点击重新选择 ${element.data.type}`
+                }
+              >
+                {element.type === 'bracket' ? value.substring(element.start, element.end) : element.content}
+              </div>
+            );
+          })}
       </div>
     </div>
   );

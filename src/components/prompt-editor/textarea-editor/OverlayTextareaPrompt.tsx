@@ -116,7 +116,8 @@ const OverlayTextareaPrompt = forwardRef<HTMLTextAreaElement, OverlayTextareaPro
         
         // 如果whiteSpace是nowrap，不进行自动换行
         if (whiteSpace === 'nowrap' || whiteSpace === 'pre') {
-          currentLine = paragraph;
+          currentLine += paragraph;
+          currentLineWidth += getTextMetrics(paragraph, font).width;
           continue;
         }
         
@@ -137,70 +138,83 @@ const OverlayTextareaPrompt = forwardRef<HTMLTextAreaElement, OverlayTextareaPro
             }
           }
         } else {
-          // 按单词分割（默认行为）
-          const words = paragraph.split(' ');
-          
-          for (let j = 0; j < words.length; j++) {
-            const word = words[j];
-            const wordWidth = getTextMetrics(word, font).width;
-            const spaceWidth = j > 0 ? getTextMetrics(' ', font).width : 0;
+          // 逐字符处理，正确处理空格和单词边界
+          let charIndex = 0;
+          while (charIndex < paragraph.length) {
+            const char = paragraph[charIndex];
+            const charWidth = getTextMetrics(char, font).width;
             
-            // 检查是否需要换行
-            const totalWidth = currentLineWidth + spaceWidth + wordWidth;
-            
-            if (currentLine === '' || totalWidth <= availableWidth) {
-              // 可以添加到当前行
-              if (currentLine !== '') {
-                currentLine += ' ';
-                currentLineWidth += spaceWidth;
-              }
-              currentLine += word;
-              currentLineWidth += wordWidth;
-            } else {
-              // 需要换行
-              if (wordWidth > availableWidth && wordWrap === 'break-word') {
-                // 单词太长，需要强制断行
+            if (char === ' ') {
+              // 处理空格字符
+              if (currentLineWidth + charWidth <= availableWidth) {
+                currentLine += char;
+                currentLineWidth += charWidth;
+              } else {
+                // 空格导致超出宽度，换行
                 lines.push(currentLine);
-                
-                // 将长单词按字符分割
-                let remainingWord = word;
-                while (remainingWord.length > 0) {
-                  let lineChars = '';
-                  let lineWidth = 0;
+                currentLine = '';
+                currentLineWidth = 0;
+                // 行首空格需要保留
+                currentLine += char;
+                currentLineWidth += charWidth;
+              }
+              charIndex++;
+            } else {
+              // 处理非空格字符，需要找到完整的单词
+              let wordStart = charIndex;
+              let wordEnd = charIndex;
+              
+              // 找到单词结束位置
+              while (wordEnd < paragraph.length && paragraph[wordEnd] !== ' ') {
+                wordEnd++;
+              }
+              
+              const word = paragraph.substring(wordStart, wordEnd);
+              const wordWidth = getTextMetrics(word, font).width;
+              
+              if (currentLineWidth + wordWidth <= availableWidth) {
+                // 单词可以放在当前行
+                currentLine += word;
+                currentLineWidth += wordWidth;
+              } else {
+                // 单词无法放在当前行
+                if (wordWidth > availableWidth && wordWrap === 'break-word') {
+                  // 单词太长，需要强制断行
+                  if (currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = '';
+                    currentLineWidth = 0;
+                  }
                   
-                  for (let k = 0; k < remainingWord.length; k++) {
-                    const char = remainingWord[k];
-                    const charWidth = getTextMetrics(char, font).width;
+                  // 将长单词按字符分割
+                  for (let k = wordStart; k < wordEnd; k++) {
+                    const wordChar = paragraph[k];
+                    const wordCharWidth = getTextMetrics(wordChar, font).width;
                     
-                    if (lineWidth + charWidth <= availableWidth) {
-                      lineChars += char;
-                      lineWidth += charWidth;
+                    if (currentLineWidth + wordCharWidth <= availableWidth) {
+                      currentLine += wordChar;
+                      currentLineWidth += wordCharWidth;
                     } else {
-                      break;
+                      lines.push(currentLine);
+                      currentLine = wordChar;
+                      currentLineWidth = wordCharWidth;
                     }
                   }
-                  
-                  if (lineChars.length === 0) {
-                    // 连一个字符都放不下，至少放一个字符
-                    lineChars = remainingWord[0];
-                    remainingWord = remainingWord.slice(1);
+                } else {
+                  // 正常换行
+                  if (currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = word;
+                    currentLineWidth = wordWidth;
                   } else {
-                    remainingWord = remainingWord.slice(lineChars.length);
-                  }
-                  
-                  if (remainingWord.length === 0) {
-                    currentLine = lineChars;
-                    currentLineWidth = getTextMetrics(lineChars, font).width;
-                  } else {
-                    lines.push(lineChars);
+                    // 如果当前行为空但单词仍然放不下，至少要放这个单词
+                    currentLine = word;
+                    currentLineWidth = wordWidth;
                   }
                 }
-              } else {
-                // 正常换行
-                lines.push(currentLine);
-                currentLine = word;
-                currentLineWidth = wordWidth;
               }
+              
+              charIndex = wordEnd;
             }
           }
         }

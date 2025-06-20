@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import  PromptEditor from "@/components/PromptEditor";
+import PromptEditor from "@/components/default-prompt-editor";
+import { RegexBlockFeature, RegexBlockNode } from "@/components/default-prompt-editor/plugins/regex-block-v2";
 
 export default function LexicalDemo() {
   const [prompt, setPrompt] = useState("我的目标市场是[国家]，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");
@@ -26,8 +27,13 @@ export default function LexicalDemo() {
 
           <PromptEditor
             value={prompt}
-            onChange={setPrompt}
-
+            onChange={(content) => {
+              if (typeof content === "string") {
+                setPrompt(content);
+              } else {
+                setPrompt(content.text);
+              }
+            }}
             placeholder="在这里输入包含正则表达式的文本..."
             style={{
               minHeight: "300px",
@@ -36,7 +42,13 @@ export default function LexicalDemo() {
               borderRadius: "4px",
               backgroundColor: "white",
             }}
-          />
+            editorConfig={{
+              nodes: [RegexBlockNode],
+            }}
+          >
+
+            <RegexBlockFeature regexBlockOptions={[]} onSelectRegexBlock={() => {}} />
+          </PromptEditor>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">

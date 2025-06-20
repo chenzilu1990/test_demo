@@ -1,0 +1,194 @@
+/* Mention Node 样式 */
+.mention-node {
+  display: inline-block;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 2px;
+  position: relative;
+}
+
+.mention-node:hover {
+  background-color: #7dd3fc;
+  color: #0c4a6e;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mention-node:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 不同类型的 mention 样式 */
+.mention-node[data-mention-type="user"] {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.mention-node[data-mention-type="team"] {
+  background-color: #ede9fe;
+  color: #6d28d9;
+}
+
+.mention-node[data-mention-type="role"] {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+/* Mention 菜单样式 */
+.mention-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-width: 300px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+/* 菜单项样式 */
+.mention-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  gap: 10px;
+}
+
+.mention-menu-item:hover,
+.mention-menu-item.selected {
+  background-color: #f3f4f6;
+}
+
+.mention-menu-item:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.mention-menu-item:last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* 头像样式 */
+.mention-menu-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* 信息容器 */
+.mention-menu-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 名称 */
+.mention-menu-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 邮箱 */
+.mention-menu-email {
+  font-size: 12px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 类型标签 */
+.mention-menu-type {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.mention-menu-type-user {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.mention-menu-type-team {
+  background-color: #ede9fe;
+  color: #7c3aed;
+}
+
+.mention-menu-type-role {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+/* 滚动条样式 */
+.mention-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mention-menu::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.mention-menu::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.mention-menu::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .mention-node {
+    background-color: #1e3a8a;
+    color: #bfdbfe;
+  }
+  
+  .mention-node:hover {
+    background-color: #1e40af;
+    color: #dbeafe;
+  }
+  
+  .mention-menu {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .mention-menu-item:hover,
+  .mention-menu-item.selected {
+    background-color: #374151;
+  }
+  
+  .mention-menu-name {
+    color: #f3f4f6;
+  }
+  
+  .mention-menu-email {
+    color: #9ca3af;
+  }
+  
+  .mention-menu-avatar {
+    background-color: #4b5563;
+  }
+}

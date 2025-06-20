@@ -1,0 +1,301 @@
+/* Regex Block Node 样式 */
+.regex-block-node {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 2px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.regex-block-node:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.regex-block-node:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 不同类型的 regex block 样式 */
+/* 方括号类型 */
+.regex-block-node[data-regex-type="square"] {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.regex-block-node[data-regex-type="square"]:hover {
+  background-color: #fcd34d;
+  color: #78350f;
+}
+
+/* 花括号类型 */
+.regex-block-node[data-regex-type="curly"] {
+  background-color: #ddd6fe;
+  color: #6d28d9;
+  border: 1px solid #a78bfa;
+}
+
+.regex-block-node[data-regex-type="curly"]:hover {
+  background-color: #c4b5fd;
+  color: #5b21b6;
+}
+
+/* 双花括号类型 */
+.regex-block-node[data-regex-type="double-curly"] {
+  background-color: #fecaca;
+  color: #dc2626;
+  border: 1px solid #f87171;
+}
+
+.regex-block-node[data-regex-type="double-curly"]:hover {
+  background-color: #f87171;
+  color: #b91c1c;
+}
+
+/* Regex Block 菜单样式 */
+.regex-block-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-width: 400px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+/* 菜单头部 */
+.regex-block-menu-header {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* 菜单项样式 */
+.regex-block-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.regex-block-menu-item:hover,
+.regex-block-menu-item.selected {
+  background-color: #f3f4f6;
+}
+
+.regex-block-menu-item:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.regex-block-menu-item:last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-bottom: none;
+}
+
+/* 类型图标 */
+.regex-block-menu-icon {
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
+  color: white;
+}
+
+.regex-block-menu-item .regex-block-menu-icon {
+  background: #6b7280;
+}
+
+.regex-block-menu-item[data-type="square"] .regex-block-menu-icon,
+.regex-block-menu-item:has(.regex-block-menu-category-square) .regex-block-menu-icon {
+  background: #f59e0b;
+}
+
+.regex-block-menu-item[data-type="curly"] .regex-block-menu-icon,
+.regex-block-menu-item:has(.regex-block-menu-category-curly) .regex-block-menu-icon {
+  background: #8b5cf6;
+}
+
+.regex-block-menu-item[data-type="double-curly"] .regex-block-menu-icon,
+.regex-block-menu-item:has(.regex-block-menu-category-double-curly) .regex-block-menu-icon {
+  background: #ef4444;
+}
+
+/* 信息容器 */
+.regex-block-menu-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 内容 */
+.regex-block-menu-content {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+}
+
+/* 描述 */
+.regex-block-menu-description {
+  font-size: 12px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 分类标签 */
+.regex-block-menu-category {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.regex-block-menu-category-square {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.regex-block-menu-category-curly {
+  background-color: #ddd6fe;
+  color: #6d28d9;
+}
+
+.regex-block-menu-category-double-curly {
+  background-color: #fecaca;
+  color: #dc2626;
+}
+
+/* 滚动条样式 */
+.regex-block-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.regex-block-menu::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.regex-block-menu::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.regex-block-menu::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .regex-block-node[data-regex-type="square"] {
+    background-color: #451a03;
+    color: #fbbf24;
+    border-color: #92400e;
+  }
+  
+  .regex-block-node[data-regex-type="curly"] {
+    background-color: #3c1781;
+    color: #c4b5fd;
+    border-color: #6d28d9;
+  }
+  
+  .regex-block-node[data-regex-type="double-curly"] {
+    background-color: #7f1d1d;
+    color: #fca5a5;
+    border-color: #dc2626;
+  }
+  
+  .regex-block-menu {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .regex-block-menu-header {
+    background: #111827;
+    border-color: #374151;
+    color: #cbd5e1;
+  }
+  
+  .regex-block-menu-item {
+    border-color: #374151;
+  }
+  
+  .regex-block-menu-item:hover,
+  .regex-block-menu-item.selected {
+    background-color: #374151;
+  }
+  
+  .regex-block-menu-content {
+    color: #f3f4f6;
+  }
+  
+  .regex-block-menu-description {
+    color: #9ca3af;
+  }
+  
+  .regex-block-menu::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  
+  .regex-block-menu::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
+  
+  .regex-block-menu::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .regex-block-menu {
+    max-width: 90vw;
+  }
+  
+  .regex-block-menu-item {
+    padding: 10px 12px;
+  }
+  
+  .regex-block-menu-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .regex-block-menu-content {
+    font-size: 13px;
+  }
+  
+  .regex-block-menu-description {
+    font-size: 11px;
+  }
+}

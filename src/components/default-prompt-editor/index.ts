@@ -35,6 +35,11 @@ export type {
 // 插件管理器
 export { PluginProvider, PluginContainer, usePluginManager } from './plugins/PluginManager'
 
+// 插件导出
+export * from './plugins/prompt-template'
+export * from './plugins/regex-block-v2'
+export * from './plugins/mention-v2'
+
 // 工具函数
 export * from './utils'
 

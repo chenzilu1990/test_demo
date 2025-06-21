@@ -1,0 +1,127 @@
+/* Prompt Template Node 样式 */
+.prompt-template-node {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 3px;
+  padding: 0 2px;
+  margin: 0 1px;
+  display: inline-block;
+}
+
+/* 参数样式（未选择） */
+.prompt-template-parameter {
+  color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid transparent;
+}
+
+.prompt-template-parameter:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* 已选择的值样式 */
+.prompt-template-selected {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.prompt-template-selected:hover {
+  background-color: rgba(5, 150, 105, 0.2);
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+/* 菜单样式 */
+.prompt-template-menu {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  min-width: 200px;
+  max-width: 300px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.prompt-template-menu-content {
+  padding: 4px;
+}
+
+.prompt-template-menu-header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
+}
+
+.prompt-template-menu-options {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.prompt-template-menu-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+  font-size: 14px;
+  color: #374151;
+}
+
+.prompt-template-menu-option:hover {
+  background-color: #f3f4f6;
+}
+
+.prompt-template-menu-option:active {
+  background-color: #e5e7eb;
+}
+
+/* 暗色模式支持 */
+.dark .prompt-template-menu {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .prompt-template-menu-header {
+  color: #9ca3af;
+  border-bottom-color: #374151;
+}
+
+.dark .prompt-template-menu-option {
+  color: #e5e7eb;
+}
+
+.dark .prompt-template-menu-option:hover {
+  background-color: #374151;
+}
+
+.dark .prompt-template-menu-option:active {
+  background-color: #4b5563;
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .prompt-template-menu {
+    min-width: 150px;
+    max-width: 250px;
+  }
+  
+  .prompt-template-menu-option {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}

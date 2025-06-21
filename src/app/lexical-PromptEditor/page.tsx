@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import PromptEditor from "@/components/default-prompt-editor";
-import { RegexBlockFeature, RegexBlockNode } from "@/components/default-prompt-editor/plugins/regex-block-v2";
+import { PromptTemplateFeature, PromptTemplateNode } from "@/components/default-prompt-editor/plugins/prompt-template";
 
 export default function LexicalDemo() {
   const [prompt, setPrompt] = useState("我的目标市场是{国家}，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");
@@ -43,27 +43,21 @@ export default function LexicalDemo() {
               backgroundColor: "white",
             }}
             editorConfig={{
-              nodes: [RegexBlockNode],
+              nodes: [PromptTemplateNode],
             }}
           >
-
-            <RegexBlockFeature regexBlockOptions={[
-              {
-                id: "1",
-                type: "square",
-                content: "123",
-              },
-              {
-                id: "2",
-                type: "curly",
-                content: "123",
-              },
-              {
-                id: "3",
-                type: "double-curly",
-                content: "123",
-              },
-            ]} onSelectRegexBlock={() => {}} />
+            <PromptTemplateFeature 
+              parameterOptions={{
+                "国家": ["美国", "中国", "日本", "韩国", "英国", "法国", "德国"],
+                "性别": ["男性", "女性", "不限"],
+                "年龄段": ["18-25岁", "26-35岁", "36-45岁", "46-55岁", "56岁以上"],
+                "产品或品类": ["电子产品", "服装鞋帽", "美妆护肤", "食品饮料", "家居用品", "运动户外"],
+                "产品优势或卖点": ["高性价比", "品质卓越", "创新设计", "环保可持续", "便捷实用", "个性定制"]
+              }}
+              onSelectOption={(param, value) => {
+                console.log(`Selected ${param}: ${value}`);
+              }}
+            />
           </PromptEditor>
         </div>
 

@@ -6,7 +6,7 @@ import PromptEditor from "@/components/default-prompt-editor";
 import { RegexBlockFeature, RegexBlockNode } from "@/components/default-prompt-editor/plugins/regex-block-v2";
 
 export default function LexicalDemo() {
-  const [prompt, setPrompt] = useState("我的目标市场是[国家]，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");
+  const [prompt, setPrompt] = useState("我的目标市场是{国家}，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");
 
   return (
     <div className="min-h-screen p-8">
@@ -47,7 +47,23 @@ export default function LexicalDemo() {
             }}
           >
 
-            <RegexBlockFeature regexBlockOptions={[]} onSelectRegexBlock={() => {}} />
+            <RegexBlockFeature regexBlockOptions={[
+              {
+                id: "1",
+                type: "square",
+                content: "123",
+              },
+              {
+                id: "2",
+                type: "curly",
+                content: "123",
+              },
+              {
+                id: "3",
+                type: "double-curly",
+                content: "123",
+              },
+            ]} onSelectRegexBlock={() => {}} />
           </PromptEditor>
         </div>
 

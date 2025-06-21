@@ -1,5 +1,5 @@
 import React from 'react';
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 import { ExtendedPromptTemplate } from '../types';
 import TagDisplay from './TagDisplay';
 import EmptyState from './EmptyState';

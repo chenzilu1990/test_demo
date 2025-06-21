@@ -1,4 +1,4 @@
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 import { ExtendedPromptTemplate, LEGACY_KEYS, UNIFIED_TEMPLATES_KEY, generateTemplateId } from '../types';
 
 /**

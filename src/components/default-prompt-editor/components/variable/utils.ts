@@ -1,4 +1,4 @@
-import { ValueSelector } from "@/components/PromptEditor/types"
+import { ValueSelector } from "../../types"
 
 export const isSystemVar = (valueSelector: ValueSelector) => {
   return valueSelector[0] === 'sys' || valueSelector[1] === 'sys'

@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
-import InteractivePrompt from '@/components/prompt-editor/InteractivePrompt';
-import { PromptTemplate,BracketParameterOptions } from "@/components/prompt-editor/types";
+import PromptEditorWrapper from './PromptEditorWrapper';
+import { PromptTemplate, BracketParameterOptions } from "@/components/default-prompt-editor";
 import { ModelOption } from './types';
 
 interface ChatInputProps {
@@ -66,7 +66,7 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
   return (
     <div className="bg-white dark:bg-gray-800 p-4">
       <div className="container mx-auto max-w-4xl">
-        <InteractivePrompt
+        <PromptEditorWrapper
           value={inputPrompt}
           onChange={handleInputChange}
           templates={templates}

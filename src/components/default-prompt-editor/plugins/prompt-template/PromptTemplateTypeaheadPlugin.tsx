@@ -19,7 +19,7 @@ interface MenuState {
 export default function PromptTemplateTypeaheadPlugin({
   parameterOptions = {},
   onSelectOption
-}: PromptTemplateTypeaheadPluginProps): JSX.Element | null {
+}: PromptTemplateTypeaheadPluginProps): React.JSX.Element | null {
   const [editor] = useLexicalComposerContext()
   const [menuState, setMenuState] = useState<MenuState>({
     isOpen: false,

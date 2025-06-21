@@ -11,8 +11,7 @@ import {
   ChatMessage 
 } from '@/ai-providers/types';
 import { ConversationMessage, ModelOption } from './components/types';
-import { PromptTemplate } from '@/components/prompt-editor/types';
-import { BracketParameterOptions } from "@/components/prompt-editor/types";
+import { PromptTemplate, BracketParameterOptions } from '@/components/default-prompt-editor';
 import ChatDialog from './components/ChatDialog';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 
 interface TemplatePreviewProps {
   template: PromptTemplate;

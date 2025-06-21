@@ -28,7 +28,7 @@ import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { registerLexicalTextEntity } from './utils'
 
-export type UseSelectOrDeleteHanlder = (nodeKey: string, command?: LexicalCommand<undefined>) => [RefObject<HTMLDivElement>, boolean]
+export type UseSelectOrDeleteHanlder = (nodeKey: string, command?: LexicalCommand<undefined>) => [RefObject<HTMLDivElement | null>, boolean]
 export const useSelectOrDelete: UseSelectOrDeleteHanlder = (nodeKey: string, command?: LexicalCommand<undefined>) => {
   const ref = useRef<HTMLDivElement>(null)
   const [editor] = useLexicalComposerContext()
@@ -96,7 +96,7 @@ export const useSelectOrDelete: UseSelectOrDeleteHanlder = (nodeKey: string, com
   return [ref, isSelected]
 }
 
-export type UseTriggerHandler = () => [RefObject<HTMLDivElement>, boolean, Dispatch<SetStateAction<boolean>>]
+export type UseTriggerHandler = () => [RefObject<HTMLDivElement | null>, boolean, Dispatch<SetStateAction<boolean>>]
 export const useTrigger: UseTriggerHandler = () => {
   const triggerRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)

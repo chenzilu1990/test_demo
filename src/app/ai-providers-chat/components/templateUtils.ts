@@ -1,4 +1,4 @@
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 import { AIProvider, ChatMessage } from '@/ai-providers/types';
 
 export const SYSTEM_PROMPT = `你是一个专业的提示词模板生成器。你需要将用户的提示词转换为带参数的模板格式，参数必须用方括号[]包裹。

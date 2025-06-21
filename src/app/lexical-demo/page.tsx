@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import LexicalPromptEditor from "@/components/prompt-editor/lexical-editor/LexicalPromptEditor";
-import { BracketParameterOptions } from "@/components/prompt-editor/types";
+import PromptEditor, { BracketParameterOptions } from "@/components/default-prompt-editor";
+import { PromptTemplateFeature, PromptTemplateNode } from "@/components/default-prompt-editor/plugins/prompt-template";
 
 export default function LexicalDemo() {
   const [prompt, setPrompt] = useState("我的目标市场是[国家]，目标用户是[性别]，目标[年龄段]，品类是[产品或品类]，产品优势是[产品优势或卖点]请帮我做目标用户画像分析");
@@ -48,17 +48,34 @@ export default function LexicalDemo() {
             基于 Lexical 构建的富文本编辑器，支持参数化提示词模板。点击蓝色方括号选择参数，点击绿色已选值重新编辑。
           </p>
           
-          <LexicalPromptEditor
+          <PromptEditor
             value={prompt}
-            onChange={setPrompt}
-            bracketOptions={bracketOptions}
-            height="10rem"
-            placeholder="在这里输入您的提示词模板..."
-            onGenerateMoreOptions={(paramName: string, currentOptions: string[]) => {
-              console.log("onGenerateMoreOptions", paramName, currentOptions);
-              return Promise.resolve([]);
+            onChange={(content: any) => {
+              if (typeof content === "string") {
+                setPrompt(content);
+              } else {
+                setPrompt(content.text);
+              }
             }}
-          />
+            placeholder="在这里输入您的提示词模板..."
+            style={{
+              minHeight: "10rem",
+              padding: "12px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              backgroundColor: "white",
+            }}
+            editorConfig={{
+              nodes: [PromptTemplateNode],
+            }}
+          >
+            <PromptTemplateFeature 
+              parameterOptions={bracketOptions}
+              onSelectOption={(param, value) => {
+                console.log(`Selected ${param}: ${value}`);
+              }}
+            />
+          </PromptEditor>
         </div>
         
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   LexicalTypeaheadMenuPlugin,
@@ -13,7 +13,6 @@ import {
   $getNodeByKey,
 } from 'lexical'
 import { $createRegexBlockNode, $isRegexBlockNode, type RegexBlockData, type RegexBlockType } from './RegexBlockNode'
-import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 
 // 菜单选项类
@@ -43,7 +42,7 @@ interface RegexBlockTypeaheadPluginProps {
 export default function RegexBlockTypeaheadPlugin({
   regexBlockOptions,
   onSelectRegexBlock,
-}: RegexBlockTypeaheadPluginProps): JSX.Element | null {
+}: RegexBlockTypeaheadPluginProps): React.JSX.Element | null {
   const [editor] = useLexicalComposerContext()
   const [queryString, setQueryString] = useState<string | null>(null)
   const [clickedNodeKey, setClickedNodeKey] = useState<string | null>(null)

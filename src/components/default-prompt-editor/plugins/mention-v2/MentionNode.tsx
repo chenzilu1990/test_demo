@@ -72,7 +72,7 @@ export class MentionNode extends TextNode {
     dom: HTMLElement,
     config: EditorConfig,
   ): boolean {
-    const isUpdated = super.updateDOM(prevNode, dom, config)
+    const isUpdated = super.updateDOM(prevNode as this, dom, config)
     
     if (prevNode.__data.id !== this.__data.id) {
       dom.setAttribute('data-mention-id', this.__data.id)

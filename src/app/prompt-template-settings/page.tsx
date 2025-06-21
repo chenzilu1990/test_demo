@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 import TemplateList from './components/TemplateList';
 import EmptyState from './components/EmptyState';
 import TemplateEditor from './components/TemplateEditor';

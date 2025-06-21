@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   LexicalTypeaheadMenuPlugin,
@@ -13,7 +13,6 @@ import {
   $getNodeByKey,
 } from 'lexical'
 import { $createMentionNode, $isMentionNode, type MentionNodeData } from './MentionNode'
-import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 
 // 菜单选项类
@@ -36,7 +35,7 @@ interface MentionTypeaheadPluginProps {
 export default function MentionTypeaheadPlugin({
   mentionOptions,
   onSelectMention,
-}: MentionTypeaheadPluginProps): JSX.Element | null {
+}: MentionTypeaheadPluginProps): React.JSX.Element | null {
   const [editor] = useLexicalComposerContext()
   const [queryString, setQueryString] = useState<string | null>(null)
   const [clickedNodeKey, setClickedNodeKey] = useState<string | null>(null)

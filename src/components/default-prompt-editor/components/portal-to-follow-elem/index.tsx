@@ -120,9 +120,9 @@ React.HTMLProps<HTMLElement> & { asChild?: boolean }
       context.getReferenceProps({
         ref,
         ...props,
-        ...children.props,
+        ...(typeof children.props === 'object' ? children.props : {}),
         'data-state': context.open ? 'open' : 'closed',
-      }),
+      } as any),
     )
   }
 

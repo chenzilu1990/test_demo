@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 import { ExtendedPromptTemplate } from '../types';
 import TagSelector from './TagSelector';
 import { createDefaultTags } from '../utils/tagManager';

@@ -27,7 +27,7 @@ export default function LexicalDemo() {
 
           <PromptEditor
             value={prompt}
-            onChange={(content) => {
+            onChange={(content: any) => {
               if (typeof content === "string") {
                 setPrompt(content);
               } else {

@@ -1,6 +1,6 @@
 // 主组件
-export { default as PromptEditor, default } from './index.tsx'
-export type { PromptEditorProps } from './index.tsx'
+export { default as PromptEditor, default } from './PromptEditor'
+export type { PromptEditorProps } from './PromptEditor'
 
 // 编辑器类型
 export type {
@@ -45,3 +45,15 @@ export * from './utils'
 
 // 类型
 export * from './types'
+
+// 兼容性类型 - 支持从 prompt-editor 迁移
+export type {
+  PromptTemplate,
+  BracketParameterOptions,
+  SelectedOption,
+  BracketFormatConfig,
+  ErrorType,
+  ErrorSeverity,
+  ErrorInfo
+} from './compatibility-types'
+export { DEFAULT_BRACKET_FORMATS } from './compatibility-types'

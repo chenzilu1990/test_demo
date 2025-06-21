@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 import { ModelOption } from '@/app/ai-providers-chat/components/types';
 import { AIProvider } from '@/ai-providers/types';
 import ModelFilter from './ModelFilter';

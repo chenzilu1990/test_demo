@@ -100,7 +100,7 @@ export class PromptTemplateNode extends TextNode {
     dom: HTMLElement,
     config: EditorConfig,
   ): boolean {
-    const isUpdated = super.updateDOM(prevNode, dom, config)
+    const isUpdated = super.updateDOM(prevNode as this, dom, config)
     
     // 更新类名
     if (prevNode.__data.isSelected !== this.__data.isSelected) {

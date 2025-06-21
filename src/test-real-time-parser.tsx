@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import LexicalPromptEditor from './components/prompt-editor/lexical-editor/LexicalPromptEditor';
-import { BracketParameterOptions } from './components/prompt-editor/types';
+import PromptEditor from './components/default-prompt-editor';
+import { BracketParameterOptions, PromptTemplateFeature } from './components/default-prompt-editor';
 
 export default function TestRealTimeParser() {
   const [value, setValue] = useState('请输入一些文本，然后尝试输入 [国家] 或 [城市] 等方括号参数。');
@@ -45,16 +45,19 @@ export default function TestRealTimeParser() {
         <label className="block text-sm font-medium mb-2">
           编辑器内容：
         </label>
-        <LexicalPromptEditor
+        <PromptEditor
           value={value}
-          onChange={setValue}
-          bracketOptions={bracketOptions}
-          onBracketOptionsUpdate={setBracketOptions}
-          onGenerateMoreOptions={handleGenerateMoreOptions}
+          onChange={(content: any) => setValue(typeof content === 'string' ? content : content.text)}
           placeholder="在这里输入并测试方括号参数..."
-          height="200px"
-          className="border-2 border-gray-300 rounded-lg"
-        />
+          className="border-2 border-gray-300 rounded-lg min-h-[200px]"
+        >
+          <PromptTemplateFeature
+            parameterOptions={bracketOptions}
+            onSelectOption={(paramName, selectedValue) => {
+              console.log(`Selected ${selectedValue} for ${paramName}`);
+            }}
+          />
+        </PromptEditor>
       </div>
 
       <div className="mb-4">

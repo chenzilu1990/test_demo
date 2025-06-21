@@ -55,7 +55,7 @@ const Item: FC<ItemProps> = ({
   })
   const [isChildrenHovering, setIsChildrenHovering] = useState(false)
   const isHovering = isItemHovering || isChildrenHovering
-  const open = isChildren && isHovering
+  const open = !!(isChildren && isHovering)
   useEffect(() => {
     onHovering && onHovering(isHovering)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,7 +98,7 @@ const Item: FC<ItemProps> = ({
         {isChildren && (
           <ObjectChildren
             nodeId={nodeId}
-            data={itemData.variables}
+            data={itemData.variables || []}
             onChange={onChange}
             onHovering={setIsChildrenHovering}
             itemWidth={ itemWidth }
@@ -207,7 +207,7 @@ const VarReferenceVars: FC<Props> = ({
               <input
                 value={searchText}
                 className='var-reference-vars__search-input'
-                placeholder={'Search node' || ''}
+                placeholder='Search node'
                 onChange={e => setSearchText(e.target.value)}
                 onFocus={setFocus}
                 onBlur={setBlur}
@@ -237,7 +237,7 @@ const VarReferenceVars: FC<Props> = ({
             filteredVars.map((item, i) => (
               <Item
                 key={i}
-                nodeId={item.id}
+                nodeId={item.id || ''}
                 itemData={item}
                 onChange={onChange}
                 itemWidth={itemWidth}

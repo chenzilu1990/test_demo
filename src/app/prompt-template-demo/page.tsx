@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import PromptEditor from "@/components/default-prompt-editor";
 import { PromptTemplateFeature, PromptTemplateNode } from "@/components/default-prompt-editor/plugins/prompt-template";
-import type { PromptTemplate } from "@/components/prompt-editor/types";
+import type { PromptTemplate } from "@/components/default-prompt-editor";
 
 // 预定义的模板
 const templates: PromptTemplate[] = [
@@ -101,7 +101,7 @@ export default function PromptTemplateDemo() {
 
           <PromptEditor
             value={prompt}
-            onChange={(content) => {
+            onChange={(content: any) => {
               if (typeof content === "string") {
                 setPrompt(content);
               } else {
@@ -161,7 +161,7 @@ export default function PromptTemplateDemo() {
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
               <h3 className="font-semibold mb-2">📝 多格式支持</h3>
               <p className="text-sm">
-                支持方括号[]、单花括号{}、双花括号{{}}三种参数格式
+                支持方括号[]、单花括号{`{}`}、双花括号{`{{}}`}三种参数格式
               </p>
             </div>
             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded">

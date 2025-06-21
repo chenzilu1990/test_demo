@@ -1,4 +1,4 @@
-import { PromptTemplate } from '@/components/prompt-editor/types';
+import { PromptTemplate } from '@/components/default-prompt-editor';
 
 // 标签数据结构
 export interface TemplateTag {

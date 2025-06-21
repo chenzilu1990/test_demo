@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import InteractivePrompt from "@/components/prompt-editor/InteractivePrompt";
-import { BracketParameterOptions } from "@/components/prompt-editor/types";
-import { PromptTemplate } from "@/components/prompt-editor/types";
+import PromptEditorWrapper from "./PromptEditorWrapper";
+import { BracketParameterOptions, PromptTemplate } from "@/components/default-prompt-editor";
 
 /**
  * 参数化模板示例组件
- * 演示如何正确使用 InteractivePrompt 的 PromptTemplate 功能
+ * 演示如何正确使用 PromptEditorWrapper 的 PromptTemplate 功能
  */
 export default function ParameterizedTemplateExample() {
   const [prompt, setPrompt] = useState("");
@@ -59,7 +58,7 @@ export default function ParameterizedTemplateExample() {
           使用 useContentEditable = true 模式，支持参数化模板：
         </p>
         
-        <InteractivePrompt
+        <PromptEditorWrapper
           value={prompt}
           onChange={setPrompt}
           bracketOptions={bracketOptions}

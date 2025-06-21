@@ -2,6 +2,12 @@ import type {
   Node as ReactFlowNode,
 } from 'reactflow'
 
+export interface PromptTemplate {
+  title?: string;
+  prompt: string;
+  parameterOptions?: Record<string, string[]>;
+}
+
 export type ToolDefaultValue = {
   provider_id: string
   provider_type: string

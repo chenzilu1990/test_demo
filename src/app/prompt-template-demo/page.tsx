@@ -121,8 +121,14 @@ export default function PromptTemplateDemo() {
             }}
           >
             <PromptTemplateFeature 
-              parameterOptions={currentTemplate.parameterOptions || {}}
-              onSelectOption={handleOptionSelect}
+              parameterOptions={{
+
+      "性别": ["男性", "女性", "不限"],
+      "年龄段": ["18-25岁", "26-35岁", "36-45岁", "46-55岁", "56岁以上"],
+      "产品或品类": ["电子产品", "服装鞋帽", "美妆护肤", "食品饮料", "家居用品", "运动户外"],
+      "产品优势或卖点": ["高性价比", "品质卓越", "创新设计", "环保可持续", "便捷实用", "个性定制"]
+    } }
+              // onSelectOption={handleOptionSelect}
             />
           </PromptEditor>
         </div>

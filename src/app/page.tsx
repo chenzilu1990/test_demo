@@ -41,25 +41,6 @@ export default function Home() {
             💬 AI 对话测试 (支持DALL-E)
           </Link>
 
-          <Link
-            className="rounded-full border border-solid border-green-600 transition-colors flex items-center justify-center bg-green-600 text-white gap-2 hover:bg-green-700 dark:hover:bg-green-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/lexical-demo"
-          >
-            🚀 Lexical智能编辑器
-          </Link>
-          <Link
-            className="rounded-full border border-solid border-green-600 transition-colors flex items-center justify-center bg-green-600 text-white gap-2 hover:bg-green-700 dark:hover:bg-green-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/lexical-PromptEditor"
-          >
-            🚀 Lexical PromptEditor
-          </Link>
-
-          <Link
-            className="rounded-full border border-solid border-purple-600 transition-colors flex items-center justify-center bg-purple-600 text-white gap-2 hover:bg-purple-700 dark:hover:bg-purple-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/prompt-template-demo"
-          >
-            📝 PromptTemplate 演示
-          </Link>
 
           <Link
             className="rounded-full border border-solid border-indigo-600 transition-colors flex items-center justify-center bg-indigo-600 text-white gap-2 hover:bg-indigo-700 dark:hover:bg-indigo-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"

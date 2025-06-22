@@ -1,6 +1,6 @@
 // 路由常量
 export const ROUTES = {
-  AI_PROVIDERS_TEST: '/ai-providers-test'
+  // 路由常量暂时为空，可以根据需要添加
 } as const;
 
 // UI 常量

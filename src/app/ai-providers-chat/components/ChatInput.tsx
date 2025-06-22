@@ -71,7 +71,20 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
 
   return (
     <div className="bg-white dark:bg-gray-800 p-4">
-      <div className="container mx-auto max-w-4xl">
+        <div className="mt-3 flex justify-between items-center">
+
+            {/* 当前模型指示器 */}
+            {selectedProviderModel && (
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                  🤖{" "}
+                  {availableModels.find((m) => m.id === selectedProviderModel)
+                    ?.name || selectedProviderModel}
+                </span>
+              </div>
+            )}
+
+        </div>
         <PromptEditorWrapper
           value={inputPrompt}
           onChange={handleInputChange}
@@ -91,51 +104,6 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
           onEnterPress={handleEnterPress}
         />
 
-        <div className="mt-3 flex justify-between items-center">
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            <p>{hintText}</p>
-            {activeParamTemplate && (
-              <p className="mt-1 text-blue-600 dark:text-blue-400">
-                📋 使用模板: {activeParamTemplate.title}
-              </p>
-            )}
-          </div>
-
-          <div className="flex gap-3 items-center">
-            {/* 当前模型指示器 */}
-            {selectedProviderModel && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-                  🤖 {availableModels.find(m => m.id === selectedProviderModel)?.name || selectedProviderModel}
-                </span>
-              </div>
-            )}
-
-            <button
-              onClick={handleSendMessage}
-              disabled={buttonDisabled}
-              className={`px-6 py-2 rounded-full font-medium transition-all ${
-                buttonDisabled
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md hover:shadow-lg'
-              }`}
-              aria-label={buttonText}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  {buttonText}
-                </span>
-              ) : (
-                buttonText
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 });

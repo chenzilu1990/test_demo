@@ -96,7 +96,7 @@ export default function PromptEditorWrapper({
       <PromptEditor
         value={value}
         onChange={handleChange}
-        placeholder="尝试输入 @、#、[ 或 / 来触发自动完成..."
+        placeholder=""
         style={{
           minHeight: "200px",
           padding: "12px",

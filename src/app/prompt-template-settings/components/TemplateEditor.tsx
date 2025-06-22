@@ -3,7 +3,7 @@ import { PromptTemplate } from '@/components/default-prompt-editor';
 import { ExtendedPromptTemplate } from '../types';
 import TagSelector from './TagSelector';
 import { createDefaultTags } from '../utils/tagManager';
-import OverlayTextareaPrompt from '@/components/prompt-editor/textarea-editor/OverlayTextareaPrompt';
+// Removed import of OverlayTextareaPrompt as prompt-editor directory is being deleted
 
 interface TemplateEditorProps {
   template?: ExtendedPromptTemplate | null;
@@ -283,33 +283,15 @@ export default function TemplateEditor({
             <label className="block text-sm font-medium mb-2">
               模板内容 <span className="text-red-500">*</span>
             </label>
-            <OverlayTextareaPrompt
-                ref={textareaRef}
-                value={prompt}
-                onChange={setPrompt}
-                onSelectedOptionsChange={() => {}}
-                selectedOptions={[]}
-                brackets={
-                    detectParameters(prompt).map(p => {
-                        const start = prompt.indexOf(`{{${p}}}`);
-                        return {
-                            content: p,
-                            start: start,
-                            end: start + p.length + 4,
-                        }
-                    })
-                }
-                onBracketClick={() => {}}
-                onSelectedOptionClick={() => {}}
-                height="12rem"
-                computeTextDiff={(old,_new) => new Map()}
-                onKeyDown={() => {}}
+            <textarea
+              ref={textareaRef}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="输入模板内容, 例如：我的目标市场是 [国家]，产品类型是 [产品类型]..."
+              className={`w-full px-3 py-2 h-48 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none ${
+                errors.prompt ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+              }`}
             />
-            {!prompt && (
-              <div className="absolute top-12 left-4 text-gray-400 pointer-events-none">
-                输入模板内容, 例如：我的目标市场是 [国家]，产品类型是 [产品类型]...
-              </div>
-            )}
             {selectionInfo && textareaRef.current && (
               <button
                 onClick={setAsParameter}

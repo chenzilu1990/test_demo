@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import PromptEditor, { 
-  PromptTemplate, 
-  BracketParameterOptions,
-  PromptTemplateFeature,
-  PromptTemplateNode,
-  MentionFeature,
-  MentionNode,
-  ComboboxPlugin
-} from '@/components/default-prompt-editor';
+import PromptEditor, { PromptTemplate, BracketParameterOptions, PromptTemplateFeature, UnifiedComboboxFeature, MentionNode, RegexBlockNode, PromptTemplateNode } from '@/components/default-prompt-editor';
 import { ModelOption } from './types';
 
 interface PromptEditorWrapperProps {
@@ -80,134 +72,64 @@ export default function PromptEditorWrapper({
     };
   }, [localBracketOptions, paramTemplate]);
 
-  // Handle editor change
-  const handleChange = useCallback((content: any) => {
-    const text = typeof content === 'string' ? content : content.text;
-    onChange(text);
-  }, [onChange]);
-
-  // Handle clear
-  const handleClear = useCallback(() => {
-    onChange('');
-    if (editorRef.current) {
-      editorRef.current.clear?.();
-    }
-    onClear?.();
-  }, [onChange, onClear]);
-
-  // Handle option selection
-  const handleSelectOption = useCallback((parameterName: string, selectedValue: string) => {
-    console.log(`Selected ${selectedValue} for ${parameterName}`);
-    
-    // If onBracketOptionsUpdate is provided, we might want to update the options
-    // This is a simplified implementation - the original might have more complex logic
-  }, []);
+  const getAllParameterOptions = (promptTemplates: PromptTemplate[]): Record<string, string[]> => {
+    return promptTemplates.reduce((acc, template) => {
+      return {
+        ...acc,
+        ...(template.parameterOptions || {})
+      };
+    }, {});
+  };
 
   return (
     <div className={`relative ${className}`}>
       <PromptEditor
-        ref={editorRef}
-        value={prompt}
-        onChange={handleChange}
-        placeholder={placeholder}
+        value={value}
+        // onChange={handleChange}
+        placeholder="尝试输入 @、#、[ 或 / 来触发自动完成..."
         style={{
-          minHeight: height,
+          minHeight: "200px",
           padding: "12px",
           border: "1px solid #e5e7eb",
           borderRadius: "8px",
           backgroundColor: "white",
           fontSize: "14px",
           lineHeight: "1.5",
-          fontFamily: "inherit",
-          resize: "vertical",
-          overflow: "auto",
         }}
-        className="dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+        className="dark:bg-gray-900 dark:border-gray-700"
         editorConfig={{
-          nodes: [PromptTemplateNode, MentionNode],
+          nodes: [PromptTemplateNode, MentionNode, RegexBlockNode],
         }}
       >
+        {/* Base plugins for node support */}
         <PromptTemplateFeature
-          parameterOptions={{
-            国家: ["美国", "中国", "日本", "韩国", "英国", "法国", "德国"],
-            性别: ["男性", "女性", "不限"],
-            年龄段: ["18-25岁", "26-35岁", "36-45岁", "46-55岁", "56岁以上"],
-            产品或品类: [
-              "电子产品",
-              "服装鞋帽",
-              "美妆护肤",
-              "食品饮料",
-              "家居用品",
-              "运动户外",
-            ],
-            产品优势或卖点: [
-              "高性价比",
-              "品质卓越",
-              "创新设计",
-              "环保可持续",
-              "便捷实用",
-              "个性定制",
-            ],
-          }}
-          onSelectOption={(param, value) => {
-            console.log(`Selected ${param}: ${value}`);
-          }}
+          parameterOptions={getAllParameterOptions(templates)}
         />
-        <MentionFeature mentionOptions={[]} onSelectMention={() => {}} />
-        <ComboboxPlugin
-          triggers={[
-            {
-              trigger: "@",
-              options: [
-                {
-                  id: "1",
-                  label: "@123",
-                  value: "@123"
-                }
-              ],
-              onSelect: () => {}
-            }
+
+        <UnifiedComboboxFeature
+          mentionOptions={availableModels}
+          onSelectMention={(mention) => {
+            selectedProviderModel = mention.id;
+            onModelSelect?.(mention.id);
+          }}
+
+          templateOptions={templates.map((template) => ({
+            id: template.title || "default",
+            name: template.title || "default",
+            template: template.prompt
+          }))}
+
+          commandOptions={[
+            { id: "1", command: "translate" },
+            { id: "2", command: "summarize" },
+            { id: "3", command: "explain" },
+            { id: "4", command: "generate" },
+            { id: "5", command: "rewrite" },
+            { id: "6", command: "proofread" },
+            { id: "7", command: "improve" },
           ]}
         />
       </PromptEditor>
-
-      {/* Clear button */}
-      {value && (
-        <button
-          onClick={handleClear}
-          className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-          aria-label="Clear"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )}
-
-      {/* Template selector hint */}
-      {templates && templates.length > 0 && (
-        <div className="absolute left-2 bottom-2 text-xs text-gray-400 dark:text-gray-500">
-          {templates.length} 个模板可用
-        </div>
-      )}
-
-      {/* Model indicator */}
-      {selectedProviderModel && availableModels.length > 0 && (
-        <div className="absolute right-2 bottom-2 text-xs text-gray-400 dark:text-gray-500">
-          {availableModels.find((m) => m.id === selectedProviderModel)?.name ||
-            selectedProviderModel}
-        </div>
-      )}
     </div>
   );
 }

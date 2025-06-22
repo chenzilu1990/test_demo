@@ -16,15 +16,6 @@ import PromptEditor, {
 import { PromptTemplate } from "@/components/default-prompt-editor";
 
 
-// Sample data
-const mentionOptions = [
-  { id: '1', name: 'John Doe', email: 'john@example.com' },
-  { id: '2', name: 'Jane Smith', email: 'jane@example.com' },
-  { id: '3', name: 'Bob Johnson', email: 'bob@example.com' },
-  { id: '4', name: 'Alice Brown', email: 'alice@example.com' },
-  { id: '5', name: 'Charlie Davis', email: 'charlie@example.com' },
-];
-
 // ai-provider-model
 const aiProviderModelOptions = [
   { id: '1', name: 'gpt-4o', provider: 'openai' },
@@ -73,28 +64,7 @@ const promptTemplateOptions: PromptTemplate[] = [
 
 
 
-const templateOptions = [
-  { id: 't1', name: 'Meeting Invite', template: 'Dear [name], I would like to schedule a meeting on [date] at [time] to discuss [topic].' },
-  { id: 't2', name: 'Project Update', template: 'Hi team, Here\'s the update on [project]: [status]. Next steps: [actions].' },
-  { id: 't3', name: 'Bug Report', template: 'Bug found in [component]: [description]. Steps to reproduce: [steps]. Expected: [expected], Actual: [actual].' },
-];
 
-const variableOptions = {
-  'name': ['John', 'Jane', 'Team', 'Everyone'],
-  'date': ['Today', 'Tomorrow', 'Next Monday', 'Next Week'],
-  'time': ['10:00 AM', '2:00 PM', '3:30 PM', '4:00 PM'],
-  'topic': ['Project Planning', 'Code Review', 'Sprint Retrospective', 'Design Discussion'],
-  'project': ['Website Redesign', 'Mobile App', 'API Development', 'Database Migration'],
-  'status': ['On Track', 'Delayed', 'Completed', 'In Progress'],
-  'component': ['Login Form', 'Dashboard', 'API Endpoint', 'Database Query'],
-};
-
-const regexOptions = [
-  { id: 'r1', name: 'Email', pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}' },
-  { id: 'r2', name: 'Phone', pattern: '\\+?[0-9]{1,4}?[-.\\s]?\\(?[0-9]{1,3}?\\)?[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,9}' },
-  { id: 'r3', name: 'URL', pattern: 'https?://[^\\s]+' },
-  { id: 'r4', name: 'Date', pattern: '\\d{4}-\\d{2}-\\d{2}' },
-];
 
 
 

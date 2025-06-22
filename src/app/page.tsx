@@ -29,7 +29,7 @@ export default function Home() {
         <div className="flex gap-4 items-center flex-col sm:flex-row flex-wrap">
           <Link
             className="rounded-full border border-solid border-orange-600 transition-colors flex items-center justify-center bg-orange-600 text-white gap-2 hover:bg-orange-700 dark:hover:bg-orange-500 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/ai-providers"
+            href="/ai-providers-settings"
           >
             ⚙️ AI服务商配置中心
           </Link>

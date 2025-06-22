@@ -544,7 +544,7 @@ export default function AIChatPage() {
 
   // 导航到AI提供商配置页面
   const handleNavigateToProviders = () => {
-    router.push('/ai-providers');
+    router.push('/ai-providers-settings');
   };
 
   // 导航到提示词模板设置页面
@@ -774,6 +774,8 @@ export default function AIChatPage() {
             conversation={conversation}
             error={error}
             onSaveTemplate={handleSaveTemplate}
+            hasAvailableModels={availableModels.length > 0}
+            onNavigateToProviders={handleNavigateToProviders}
           />
         </div>
 

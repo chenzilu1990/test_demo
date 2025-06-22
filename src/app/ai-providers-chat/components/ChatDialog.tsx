@@ -5,9 +5,11 @@ interface ChatDialogProps {
   conversation: ConversationMessage[];
   error: string;
   onSaveTemplate?: (content: string) => void;
+  hasAvailableModels: boolean;
+  onNavigateToProviders: () => void;
 }
 
-const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSaveTemplate }) => {
+const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSaveTemplate, hasAvailableModels, onNavigateToProviders }) => {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
@@ -128,6 +130,23 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
                   </svg>
                 </button>
               )}
+              
+              {/* 重新生成按钮 - 仅AI消息显示 */}
+              {!isUser && (
+                <button
+                  onClick={() => {
+                    // 这里可以触发重新生成的逻辑
+                    console.log('重新生成回复');
+                  }}
+                  className="p-1 bg-black bg-opacity-20 text-gray-700 dark:text-gray-300 hover:bg-opacity-30 rounded-full transition-all"
+                  title="重新生成回复"
+                  aria-label="重新生成回复"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
 
@@ -143,23 +162,71 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
   return (
     <div className="h-full bg-gray-50 dark:bg-gray-900 rounded-xl shadow-inner overflow-hidden flex flex-col">
       {/* 对话内容区域 */}
-      <div 
+      <div
         className="flex-1 overflow-y-auto p-6 space-y-4"
         onScroll={handleScroll}
       >
-        {conversation.length === 0 ? (
+        {hasAvailableModels && conversation.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.451L3 21l2.451-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mb-6 shadow-lg">
+              <svg
+                className="w-10 h-10 text-blue-600 dark:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.451L3 21l2.451-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"
+                />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">开始对话</h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md">
-              在下方输入框中输入您的问题或指令，AI 将为您提供帮助。
-              <br />
-              您可以使用 @ 符号快速选择模型，# 符号选择模板。
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+              开启智能对话之旅
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 max-w-md mb-8 leading-relaxed">
+              您好！我是您的 AI 助手，随时准备帮助您解答问题、提供建议或进行创意讨论
             </p>
+            
+            {/* 快捷功能卡片 */}
+            <div className="grid grid-cols-3 gap-4 max-w-lg mb-8">
+              <div className="group cursor-pointer">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                    <span className="text-base font-bold text-blue-600 dark:text-blue-400">@</span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">切换模型</p>
+                </div>
+              </div>
+              <div className="group cursor-pointer">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
+                    <span className="text-base font-bold text-purple-600 dark:text-purple-400">#</span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">使用模板</p>
+                </div>
+              </div>
+              <div className="group cursor-pointer">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+                    <span className="text-base font-bold text-green-600 dark:text-green-400">/</span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">查看命令</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* 使用提示 */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 max-w-md">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">💡 小贴士</p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <li>• 按 <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs">Enter</kbd> 快速发送消息</li>
+                <li>• 支持上传图片进行分析（部分模型）</li>
+                <li>• 可以保存常用提示词为模板</li>
+              </ul>
+            </div>
           </div>
         ) : (
           <>
@@ -167,19 +234,102 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
             <div ref={messagesEndRef} />
           </>
         )}
+
+        {!hasAvailableModels && onNavigateToProviders && (
+          <div className="h-full flex flex-col items-center justify-center text-center p-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mb-6 shadow-lg">
+              <svg
+                className="w-10 h-10 text-gray-600 dark:text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+              尚未配置 AI 模型
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 max-w-md mb-6 leading-relaxed">
+              您需要先配置至少一个 AI 模型才能开始对话。点击下方按钮前往设置页面添加您的第一个模型。
+            </p>
+            <button
+              onClick={onNavigateToProviders}
+              className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              配置 AI 模型
+            </button>
+            <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+              支持 OpenAI、Anthropic、Google Gemini 等多种模型
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 错误提示区域 */}
       {error && (
-        <div className="border-t border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-6 py-4" role="alert">
+        <div
+          className="mx-4 mb-4 rounded-lg border border-red-200 dark:border-red-800/50 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4 shadow-sm"
+          role="alert"
+        >
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-1">发生错误</h4>
-              <p className="text-sm text-red-600 dark:text-red-400 whitespace-pre-wrap">{error}</p>
+            <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-red-600 dark:text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
             </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
+                遇到了一点问题
+              </h4>
+              <p className="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap leading-relaxed">
+                {error}
+              </p>
+              <div className="mt-3 text-xs text-red-600 dark:text-red-400">
+                <p className="font-medium mb-1">可能的解决方案：</p>
+                <ul className="space-y-0.5 ml-4">
+                  {error.includes('API') && <li>• 检查 API 密钥是否正确配置</li>}
+                  {error.includes('网络') && <li>• 检查网络连接是否正常</li>}
+                  {error.includes('限制') && <li>• 稍后再试或切换其他模型</li>}
+                  <li>• 刷新页面后重试</li>
+                </ul>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-shrink-0 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+              title="刷新页面"
+            >
+              刷新
+            </button>
           </div>
         </div>
       )}
@@ -194,8 +344,18 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
                 onClick={scrollToBottom}
                 className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
                 </svg>
                 滚动到底部
               </button>

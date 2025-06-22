@@ -53,12 +53,12 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
   }, [setInputPrompt, clearActiveTemplate]);
 
   const placeholder = isImageGenerationModel
-    ? "描述您想要生成的图像..."
-    : "输入您的问题或指令...";
+    ? "请描述您想要生成的图像，例如：一只可爱的猫咪在花园里玩耍"
+    : "有什么可以帮助您的吗？";
 
   const hintText = isImageGenerationModel
-    ? `提示：可以使用 [图像尺寸]${isDallE3Model ? ', [图像质量], [图像风格]' : ''} 来设置参数。Enter 发送，Shift+Enter 换行`
-    : "提示：可以使用 [温度]、[最大令牌] 来调整参数，或输入@选择模型、#选择模板。Enter 发送，Shift+Enter 换行";
+    ? `💡 小提示：使用 [图像尺寸]${isDallE3Model ? '、[图像质量]、[图像风格]' : ''} 可自定义生成参数`
+    : "💡 快捷键：@ 切换模型 | # 使用模板 | / 查看命令 | Enter 发送";
 
   const buttonDisabled = !inputPrompt.trim() || !selectedProviderModel || isLoading;
   const buttonText = isLoading ? '处理中...' : isImageGenerationModel ? '生成图像' : '发送';

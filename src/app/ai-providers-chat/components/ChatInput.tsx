@@ -57,11 +57,17 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
     : "输入您的问题或指令...";
 
   const hintText = isImageGenerationModel
-    ? `提示：可以使用 [图像尺寸]${isDallE3Model ? ', [图像质量], [图像风格]' : ''} 来设置参数`
-    : "提示：可以使用 [温度]、[最大令牌] 来调整参数，或输入@选择模型、#选择模板";
+    ? `提示：可以使用 [图像尺寸]${isDallE3Model ? ', [图像质量], [图像风格]' : ''} 来设置参数。Enter 发送，Shift+Enter 换行`
+    : "提示：可以使用 [温度]、[最大令牌] 来调整参数，或输入@选择模型、#选择模板。Enter 发送，Shift+Enter 换行";
 
   const buttonDisabled = !inputPrompt.trim() || !selectedProviderModel || isLoading;
   const buttonText = isLoading ? '处理中...' : isImageGenerationModel ? '生成图像' : '发送';
+
+  const handleEnterPress = useCallback((event: KeyboardEvent) => {
+    if (!buttonDisabled) {
+      handleSendMessage();
+    }
+  }, [buttonDisabled, handleSendMessage]);
 
   return (
     <div className="bg-white dark:bg-gray-800 p-4">
@@ -82,6 +88,7 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
           isImageGenerationModel={isImageGenerationModel}
           onNavigateToProviders={onNavigateToProviders}
           onNavigateToTemplateSettings={onNavigateToTemplateSettings}
+          onEnterPress={handleEnterPress}
         />
 
         <div className="mt-3 flex justify-between items-center">

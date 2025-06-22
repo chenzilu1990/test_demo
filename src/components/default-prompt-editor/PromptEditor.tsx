@@ -1,7 +1,7 @@
 'use client'
 
 import type { FC } from 'react'
-import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react'
 import type {
   EditorState,
   LexicalEditor,
@@ -16,6 +16,7 @@ import {
   REDO_COMMAND,
   CAN_UNDO_COMMAND,
   CAN_REDO_COMMAND,
+  $createParagraphNode,
 } from 'lexical'
 import { CodeNode } from '@lexical/code'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
@@ -55,7 +56,35 @@ const InnerEditor = forwardRef<EditorRef, PromptEditorProps>((
   ref
 ) => {
   const [editor] = useLexicalComposerContext()
-  const { onBlur, onFocus, children } = props
+  const { onBlur, onFocus, children, value } = props
+
+  // Sync external value changes to editor
+  useEffect(() => {
+    if (value !== undefined) {
+      const currentContent = editor.getEditorState().read(() => 
+        $getRoot().getTextContent()
+      );
+      
+      // Only update if the content is different
+      if (currentContent !== value) {
+        editor.update(() => {
+          const root = $getRoot();
+          root.clear();
+          
+          if (value) {
+            const paragraph = $createParagraphNode();
+            const textNode = new TextNode(value);
+            paragraph.append(textNode);
+            root.append(paragraph);
+          } else {
+            // For empty content, still create an empty paragraph
+            const paragraph = $createParagraphNode();
+            root.append(paragraph);
+          }
+        });
+      }
+    }
+  }, [value, editor])
 
   useImperativeHandle(ref, () => ({
     editor,

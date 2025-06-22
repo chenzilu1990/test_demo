@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import PromptEditor, { PromptTemplate, BracketParameterOptions, PromptTemplateFeature, UnifiedComboboxFeature, MentionNode, RegexBlockNode, PromptTemplateNode } from '@/components/default-prompt-editor';
+import PromptEditor, { PromptTemplate, BracketParameterOptions, PromptTemplateFeature, UnifiedComboboxFeature, MentionNode, RegexBlockNode, PromptTemplateNode, KeyboardPlugin } from '@/components/default-prompt-editor';
 import { ModelOption } from './types';
 
 interface PromptEditorWrapperProps {
@@ -27,6 +27,9 @@ interface PromptEditorWrapperProps {
   
   // Additional props that might be used
   useContentEditable?: boolean;
+  
+  // Keyboard event props
+  onEnterPress?: (event: KeyboardEvent) => void;
 }
 
 export default function PromptEditorWrapper({
@@ -47,7 +50,8 @@ export default function PromptEditorWrapper({
   isImageGenerationModel = false,
   onNavigateToProviders,
   onNavigateToTemplateSettings,
-  useContentEditable = false
+  useContentEditable = false,
+  onEnterPress
 }: PromptEditorWrapperProps) {
   const [localBracketOptions, setLocalBracketOptions] = useState<BracketParameterOptions>(bracketOptions);
   const editorRef = useRef<any>(null);
@@ -85,6 +89,7 @@ export default function PromptEditorWrapper({
     const text = typeof newContent === 'string' ? newContent : newContent.text;
     onChange(text);
   }, [onChange]);
+
 
   return (
     <div className={`relative ${className}`}>
@@ -141,6 +146,8 @@ export default function PromptEditorWrapper({
             console.log("Selected command:", command);
           }}
         />
+        
+        <KeyboardPlugin onEnterPress={onEnterPress} />
       </PromptEditor>
     </div>
   );

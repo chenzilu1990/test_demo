@@ -58,8 +58,8 @@ export default function UnifiedComboboxFeature({
           )
           .map((option) => ({
             id: option.id,
-            label: option.name + "-" + option.provider,
-            value: option.name + "-" + option.provider,
+            label: option.name,
+            value: option.name,
             data: option,
             icon: option.avatar ? (
               <img

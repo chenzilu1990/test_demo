@@ -41,6 +41,7 @@ export * from './plugins/regex-block-v2'
 export * from './plugins/mention-v2'
 export * from './plugins/combobox'
 export * from './plugins/unified-combobox'
+export * from './plugins/keyboard'
 
 // 工具函数
 export * from './utils'

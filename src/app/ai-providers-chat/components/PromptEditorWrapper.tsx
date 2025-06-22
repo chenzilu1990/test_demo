@@ -81,11 +81,16 @@ export default function PromptEditorWrapper({
     }, {});
   };
 
+  const handleChange = useCallback((newContent: any) => {
+    const text = typeof newContent === 'string' ? newContent : newContent.text;
+    onChange(text);
+  }, [onChange]);
+
   return (
     <div className={`relative ${className}`}>
       <PromptEditor
         value={value}
-        // onChange={handleChange}
+        onChange={handleChange}
         placeholder="尝试输入 @、#、[ 或 / 来触发自动完成..."
         style={{
           minHeight: "200px",
@@ -109,7 +114,6 @@ export default function PromptEditorWrapper({
         <UnifiedComboboxFeature
           mentionOptions={availableModels}
           onSelectMention={(mention) => {
-            selectedProviderModel = mention.id;
             onModelSelect?.(mention.id);
           }}
 
@@ -118,6 +122,10 @@ export default function PromptEditorWrapper({
             name: template.title || "default",
             template: template.prompt
           }))}
+          onSelectTemplate={(template) => {
+            // Insert the selected template into the editor
+            onChange(template.template);
+          }}
 
           commandOptions={[
             { id: "1", command: "translate" },
@@ -128,6 +136,10 @@ export default function PromptEditorWrapper({
             { id: "6", command: "proofread" },
             { id: "7", command: "improve" },
           ]}
+          onSelectCommand={(command) => {
+            // Handle command selection if needed
+            console.log("Selected command:", command);
+          }}
         />
       </PromptEditor>
     </div>

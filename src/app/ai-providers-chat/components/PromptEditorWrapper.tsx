@@ -133,13 +133,15 @@ export default function PromptEditorWrapper({
           }}
 
           commandOptions={[
-            { id: "1", command: "translate" },
-            { id: "2", command: "summarize" },
-            { id: "3", command: "explain" },
-            { id: "4", command: "generate" },
-            { id: "5", command: "rewrite" },
-            { id: "6", command: "proofread" },
-            { id: "7", command: "improve" },
+            { id: "1", command: "translate", description: "翻译" },
+            { id: "2", command: "summarize", description: "总结" },
+            { id: "3", command: "explain", description: "解释" },
+            { id: "4", command: "generate", description: "生成" },
+            { id: "5", command: "rewrite", description: "重写" },
+            { id: "6", command: "proofread", description: "校对" },
+            { id: "7", command: "improve", description: "改进" },
+            { id: "8", command: "clear message", description: "清除消息" },
+            { id: "9", command: "clear context", description: "清除上下文" },
           ]}
           onSelectCommand={(command) => {
             // Handle command selection if needed

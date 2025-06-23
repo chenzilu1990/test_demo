@@ -24,8 +24,8 @@ export interface UnifiedComboboxFeatureProps {
   onSelectRegex?: (regex: { id: string; name: string; pattern: string }) => void
 
   // Command options
-  commandOptions?: Array<{ id: string; command: string }>
-  onSelectCommand?: (command: { id: string; command: string }) => void
+  commandOptions?: Array<{ id: string; command: string; description: string }>
+  onSelectCommand?: (command: { id: string; command: string; description: string }) => void
 }
 
 export default function UnifiedComboboxFeature({

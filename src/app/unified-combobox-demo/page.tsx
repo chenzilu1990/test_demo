@@ -151,7 +151,15 @@ export default function UnifiedComboboxDemo() {
               // onSelectVariable={(variable, value) => {
               //   console.log(`Selected ${value} for variable ${variable}`);
               // }}
-              commandOptions={[{ id: '1', command: 'translate' }, { id: '2', command: 'summarize' }, { id: '3', command: 'explain' }, { id: '4', command: 'generate' }, { id: '5', command: 'rewrite' }, { id: '6', command: 'proofread' }, { id: '7', command: 'improve' }]}
+              commandOptions={[
+                { id: '1', command: 'translate', description: 'Translate text to another language' }, 
+                { id: '2', command: 'summarize', description: 'Create a concise summary' }, 
+                { id: '3', command: 'explain', description: 'Provide detailed explanation' }, 
+                { id: '4', command: 'generate', description: 'Generate new content' }, 
+                { id: '5', command: 'rewrite', description: 'Rewrite in a different style' }, 
+                { id: '6', command: 'proofread', description: 'Check for errors and improvements' }, 
+                { id: '7', command: 'improve', description: 'Enhance the quality of text' }
+              ]}
 
             />
           </PromptEditor>

@@ -109,7 +109,7 @@ const aihubmixModels: ModelCard[] = [
     maxTemperature: 1.0,
   },
   {
-    id: 'deepseek-ai/DeepSeek-Prover-V2-671B',
+    id: 'DeepSeek-Prover-V2-671B',
     name: 'DeepSeek-Prover-V2-671B',
     description: 'DeepSeek的Prover-V2-671B模型，深度求索系列',
     capabilities: {
@@ -150,6 +150,23 @@ const aihubmixModels: ModelCard[] = [
     enabled: true,
     maxTemperature: 1.0,
   },
+  {
+    id: 'DeepSeek-R1',
+    name: 'DeepSeek-R1',
+    description: '已升级至最新版本250528；字节火山云开源部署的满血 R1，总参数量 671B，输入最高 64k。目前最稳定，推荐用这个。',
+    capabilities: {
+      contextWindowTokens: 64000,
+      functionCall: true,
+      json: true,
+      reasoning: true,
+    },
+    enabled: true,
+    maxTemperature: 1.0,
+    price: {
+      prompt: 0.546,
+      completion: 2.184,
+    },
+  }
 ];
 
 export default aihubmixModels; 

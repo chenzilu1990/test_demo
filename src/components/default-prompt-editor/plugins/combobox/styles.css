@@ -14,7 +14,7 @@
 
 .combobox-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
@@ -64,5 +64,33 @@
 }
 
 .dark .combobox-menu .p-2 {
+  color: #9ca3af;
+}
+
+/* Upward opening menu */
+.combobox-menu-upward {
+  transform-origin: bottom;
+}
+
+/* Item content layout */
+.combobox-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+/* Description text */
+.combobox-item-description {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .combobox-item-description {
   color: #9ca3af;
 }

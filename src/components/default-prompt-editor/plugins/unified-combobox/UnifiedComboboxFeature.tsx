@@ -46,6 +46,7 @@ export default function UnifiedComboboxFeature({
   
   // Mention trigger (@)
   if (mentionOptions.length > 0) {
+    console.log('mentionOptions length============', mentionOptions.length)
     triggers.push({
       trigger: '@',
       options: (query: string) => {
@@ -124,18 +125,39 @@ export default function UnifiedComboboxFeature({
             label: option.command,
             value: option.command,
             data: option,
-            icon: <span className="text-lg">/</span>
+            icon: <span className="text-lg">/</span>,
+            description: option.description
           }))
       },
       onSelect: (option: ComboboxOption, nodeToReplace?: TextNode) => {
-        const command = option.data as { id: string; command: string }
+        const command = option.data as { id: string; command: string; description: string }
         
         editor.update(() => {
           if (nodeToReplace) {
             const text = nodeToReplace.getTextContent()
+            const lastSlashIndex = text.lastIndexOf('/')
+            
+            if (lastSlashIndex !== -1) {
+              const textBeforeCommand = text.substring(0, lastSlashIndex)
+              const commandNode = $createTextNode(command.command)
+              const spaceNode = $createTextNode(' ')
+              
+              if (textBeforeCommand) {
+                const beforeNode = $createTextNode(textBeforeCommand)
+                nodeToReplace.replace(beforeNode)
+                beforeNode.insertAfter(commandNode)
+                commandNode.insertAfter(spaceNode)
+              } else {
+                nodeToReplace.replace(commandNode)
+                commandNode.insertAfter(spaceNode)
+              }
+              
+              spaceNode.select()
+            }
           }
         })
         
+        onSelectCommand?.(command)
       }
     })
   }
@@ -194,7 +216,7 @@ export default function UnifiedComboboxFeature({
       options: (query: string) => {
         const allOptions: ComboboxOption[] = []
         
-        Object.entries(variableOptions).forEach(([variable, values]) => {
+        Object.entries(variableOptions).forEach(([variable]) => {
           if (variable.toLowerCase().includes(query.toLowerCase())) {
             // Add the variable itself as an option
             allOptions.push({
@@ -250,11 +272,11 @@ export default function UnifiedComboboxFeature({
       }
     })
   }
-    
+  console.log(" triggersz=============", triggers)
   return (
     <ComboboxPlugin
       triggers={triggers}
-      maxResults={10}
+      maxResults={100}
       menuClassName="unified-combobox-menu"
       itemClassName="unified-combobox-item"
       selectedItemClassName="unified-combobox-item-selected"

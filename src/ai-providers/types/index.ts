@@ -16,6 +16,10 @@ export interface ModelCard {
   capabilities: ModelCapabilities;
   enabled?: boolean;
   maxTemperature?: number;
+  price?: {
+    prompt?: number;
+    completion?: number;
+  };
 }
 
 export interface ProviderConfig {

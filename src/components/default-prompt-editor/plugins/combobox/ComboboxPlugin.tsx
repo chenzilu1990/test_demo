@@ -23,6 +23,7 @@ export interface ComboboxOption {
   value: string
   data?: any
   icon?: React.ReactNode
+  description?: string
 }
 
 export interface ComboboxTrigger {
@@ -46,6 +47,8 @@ interface MenuState {
   selectedIndex: number
   position: { x: number; y: number } | null
   nodeToReplace: TextNode | null
+  openUpward: boolean
+  width: number
 }
 
 const DEFAULT_MAX_RESULTS = 10
@@ -65,6 +68,8 @@ export default function ComboboxPlugin({
     selectedIndex: 0,
     position: null,
     nodeToReplace: null,
+    openUpward: false,
+    width: 200,
   })
   const menuRef = useRef<HTMLDivElement>(null)
   const [options, setOptions] = useState<ComboboxOption[]>([])
@@ -147,16 +152,33 @@ export default function ComboboxPlugin({
   // Update menu position
   const updateMenuPosition = useCallback(() => {
     const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return null
+    if (!selection || selection.rangeCount === 0) return { position: null, openUpward: false, width: 200 }
 
     const range = selection.getRangeAt(0)
     const rect = range.getBoundingClientRect()
     
+    // Get editor container to calculate width
+    const editorContainer = editor.getRootElement()
+    const editorRect = editorContainer?.getBoundingClientRect()
+    const width = editorRect?.width || 300
+    
+    // Check if we should open upward
+    const windowHeight = window.innerHeight
+    const spaceBelow = windowHeight - rect.bottom
+    const spaceAbove = rect.top
+    const menuHeight = 240 // Estimated max height
+    
+    const openUpward = spaceBelow < menuHeight && spaceAbove > spaceBelow
+    
     return {
-      x: rect.left,
-      y: rect.bottom + 5,
+      position: {
+        x: editorRect?.left || rect.left,
+        y: openUpward ? rect.top - 5 : rect.bottom + 5,
+      },
+      openUpward,
+      width: Math.min(width, 400), // Cap at 400px
     }
-  }, [])
+  }, [editor])
 
   // Handle text changes
   const handleTextChange = useCallback(() => {
@@ -164,7 +186,7 @@ export default function ComboboxPlugin({
       const match = checkForTriggerMatch()
       
       if (match) {
-        const position = updateMenuPosition()
+        const { position, openUpward, width } = updateMenuPosition()
         setMenuState({
           isOpen: true,
           triggerIndex: match.triggerIndex,
@@ -172,6 +194,8 @@ export default function ComboboxPlugin({
           selectedIndex: 0,
           position,
           nodeToReplace: match.node,
+          openUpward,
+          width,
         })
         
         // Load options
@@ -184,6 +208,8 @@ export default function ComboboxPlugin({
           selectedIndex: 0,
           position: null,
           nodeToReplace: null,
+          openUpward: false,
+          width: 200,
         })
         setOptions([])
       }
@@ -208,6 +234,8 @@ export default function ComboboxPlugin({
       selectedIndex: 0,
       position: null,
       nodeToReplace: null,
+      openUpward: false,
+      width: 200,
     })
     setOptions([])
   }, [editor, triggers, menuState])
@@ -283,6 +311,8 @@ export default function ComboboxPlugin({
             selectedIndex: 0,
             position: null,
             nodeToReplace: null,
+            openUpward: false,
+            width: 200,
           })
           setOptions([])
           return true
@@ -310,6 +340,8 @@ export default function ComboboxPlugin({
           selectedIndex: 0,
           position: null,
           nodeToReplace: null,
+          openUpward: false,
+          width: 200,
         })
         setOptions([])
       }
@@ -332,11 +364,14 @@ export default function ComboboxPlugin({
   return createPortal(
     <div
       ref={menuRef}
-      className={`combobox-menu ${menuClassName}`}
+      className={`combobox-menu ${menuClassName} ${menuState.openUpward ? 'combobox-menu-upward' : ''}`}
       style={{
         position: 'fixed',
         left: `${menuState.position.x}px`,
-        top: `${menuState.position.y}px`,
+        [menuState.openUpward ? 'bottom' : 'top']: menuState.openUpward 
+          ? `${window.innerHeight - menuState.position.y}px`
+          : `${menuState.position.y}px`,
+        width: `${menuState.width}px`,
         zIndex: 10000,
       }}
     >
@@ -356,7 +391,12 @@ export default function ComboboxPlugin({
               onMouseEnter={() => setMenuState(prev => ({ ...prev, selectedIndex: index }))}
             >
               {option.icon && <span className="combobox-item-icon">{option.icon}</span>}
-              <span className="combobox-item-label">{option.label}</span>
+              <div className="combobox-item-content">
+                <span className="combobox-item-label">{option.label}</span>
+                {option.description && (
+                  <span className="combobox-item-description">{option.description}</span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -1,5 +1,7 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from 'react';
 import { ConversationMessage } from './types';
+import MarkdownRenderer from './MarkdownRenderer';
+import './markdown-styles.css';
 
 interface ChatDialogProps {
   conversation: ConversationMessage[];
@@ -86,7 +88,14 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
           <div className={`text-sm leading-relaxed ${
             isUser ? 'text-white' : 'text-gray-900 dark:text-gray-100'
           }`}>
-            <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+            <MarkdownRenderer 
+              content={msg.content} 
+              isUser={isUser}
+              className={isUser ? '' : 'prose-sm dark:prose-invert max-w-none'}
+            />
+            {msg.isStreaming && (
+              <span className="inline-block ml-1 animate-pulse">▋</span>
+            )}
             
             {/* 图片内容 */}
             {msg.imageUrl && (
@@ -103,7 +112,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
           </div>
           
           {/* 操作按钮 */}
-          {showActions && (
+          {showActions && !msg.isStreaming && (
             <div className={`absolute top-2 ${isUser ? 'left-2' : 'right-2'} flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
               {/* 复制按钮 */}
               <button
@@ -152,7 +161,9 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
 
           {/* 消息状态指示器 */}
           {!isUser && (
-            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+            <div className={`absolute -bottom-1 -left-1 w-2 h-2 rounded-full border-2 border-white dark:border-gray-800 ${
+              msg.isStreaming ? 'bg-blue-400 animate-pulse' : 'bg-green-400'
+            }`}></div>
           )}
         </div>
       </div>

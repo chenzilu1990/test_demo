@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createProvider } from '@/ai-providers/core/providerFactory';
 import { PROVIDER_CONFIGS } from '@/ai-providers/config/providers';
@@ -58,6 +58,17 @@ export default function AIChatPage() {
 
   // 新增：侧边栏控制状态
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // 新增：流式传输状态
+  const [streamingEnabled, setStreamingEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ai-streaming-enabled') !== 'false';
+    }
+    return true;
+  });
+  
+  // 新增：用于停止流式传输的控制器
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const isDallE3Model = useMemo(() => {
     if (!selectedProviderModel) return false;
@@ -66,6 +77,23 @@ export default function AIChatPage() {
   }, [selectedProviderModel]);
 
   const bracketOptions = useMemo(() => getBracketOptions(isDallE3Model), [isDallE3Model]);
+
+  // 切换流式传输
+  const toggleStreaming = useCallback(() => {
+    const newValue = !streamingEnabled;
+    setStreamingEnabled(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ai-streaming-enabled', String(newValue));
+    }
+  }, [streamingEnabled]);
+  
+  // 停止流式传输
+  const stopStreaming = useCallback(() => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+  }, [abortController]);
 
   // 获取所有可用的模型列表
   const getAvailableModels = () => {
@@ -496,24 +524,92 @@ export default function AIChatPage() {
           messages,
           temperature,
           max_tokens: maxTokens,
-          stream: false
+          stream: streamingEnabled
         };
 
-        const response = await provider.chat(request);
-        
-        // 处理可能是数组的 content
-        const messageContent = response.choices[0].message.content;
-        const assistantMessage: ConversationMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: typeof messageContent === 'string' 
-            ? messageContent 
-            : JSON.stringify(messageContent),
-          timestamp: new Date(),
-          model: modelId
-        };
+        if (streamingEnabled && provider.chatStream) {
+          // 流式响应
+          const assistantMessage: ConversationMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: '',
+            streamContent: '',
+            isStreaming: true,
+            timestamp: new Date(),
+            model: modelId
+          };
 
-        setConversation(prev => [...prev, assistantMessage]);
+          // 先添加空消息占位
+          setConversation(prev => [...prev, assistantMessage]);
+
+          // 创建新的 AbortController
+          const controller = new AbortController();
+          setAbortController(controller);
+
+          try {
+            const stream = provider.chatStream(request);
+            let accumulatedContent = '';
+
+            for await (const chunk of stream) {
+              // 检查是否被中止
+              if (controller.signal.aborted) {
+                break;
+              }
+              
+              if (chunk.choices && chunk.choices[0]?.delta?.content) {
+                accumulatedContent += chunk.choices[0].delta.content;
+                
+                // 更新流式内容
+                setConversation(prev => prev.map(msg => 
+                  msg.id === assistantMessage.id 
+                    ? { ...msg, content: accumulatedContent, streamContent: accumulatedContent }
+                    : msg
+                ));
+              }
+            }
+
+            // 流结束，更新最终状态
+            setConversation(prev => prev.map(msg => 
+              msg.id === assistantMessage.id 
+                ? { ...msg, isStreaming: false, streamContent: undefined }
+                : msg
+            ));
+          } catch (streamError: any) {
+            console.error('流式传输错误:', streamError);
+            
+            // 如果是用户中止，只更新状态，不删除消息
+            if (streamError.name === 'AbortError' || controller.signal.aborted) {
+              setConversation(prev => prev.map(msg => 
+                msg.id === assistantMessage.id 
+                  ? { ...msg, isStreaming: false, streamContent: undefined }
+                  : msg
+              ));
+            } else {
+              // 其他错误时，移除占位消息
+              setConversation(prev => prev.filter(msg => msg.id !== assistantMessage.id));
+              throw streamError;
+            }
+          } finally {
+            setAbortController(null);
+          }
+        } else {
+          // 非流式响应
+          const response = await provider.chat(request);
+          
+          // 处理可能是数组的 content
+          const messageContent = response.choices[0].message.content;
+          const assistantMessage: ConversationMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: typeof messageContent === 'string' 
+              ? messageContent 
+              : JSON.stringify(messageContent),
+            timestamp: new Date(),
+            model: modelId
+          };
+
+          setConversation(prev => [...prev, assistantMessage]);
+        }
       }
     } catch (err: any) {
       let errorMessage = '发生未知错误';
@@ -725,13 +821,32 @@ export default function AIChatPage() {
             </div>
 
             {/* 侧边栏底部操作 */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              {/* 流式传输开关 */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700 dark:text-gray-300">流式传输</span>
+                <button
+                  onClick={toggleStreaming}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    streamingEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                  role="switch"
+                  aria-checked={streamingEnabled}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      streamingEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
               <button
                 onClick={handleClearConversation}
                 className="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
               >
                 🗑️ 清空对话记录
-            </button>
+              </button>
             </div>
           </>
         ) : (
@@ -798,6 +913,8 @@ export default function AIChatPage() {
             templates={[...paramTemplates, ...quickTemplates]}
             onNavigateToProviders={handleNavigateToProviders}
             onNavigateToTemplateSettings={handleNavigateToTemplateSettings}
+            isStreaming={!!abortController}
+            onStopStreaming={stopStreaming}
           />
         </div>
       </div>

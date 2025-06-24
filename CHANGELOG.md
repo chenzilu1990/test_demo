@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-06-24
+
+### Added
+- 流式传输支持，实现实时对话响应显示
+- 可切换的流式传输开关，支持用户偏好保存
+- 流式传输中断功能，允许用户随时停止生成
+- Markdown 解析支持，AI 响应支持完整的 GitHub Flavored Markdown
+- 代码语法高亮，支持多种编程语言
+- 自适应的明暗主题代码高亮样式
+- 改进的 UnifiedCombobox 组件，支持向上展开和描述显示
+
+### Fixed
+- 修复 DeepSeek-Prover-V2-671B 模型配置错误
+- 修复命令选择器的处理逻辑
+- 修复 UnifiedCombobox 在底部时的显示问题
+
+### Improved
+- 优化了对话体验，支持实时流式响应
+- 提升了 AI 响应的可读性，支持表格、列表、代码块等格式
+- 改进了命令选择器的用户体验
+
 ## [0.1.1] - 2025-06-22
 
 ### Added

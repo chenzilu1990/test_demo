@@ -133,3 +133,8 @@ interface BracketParameterOptions {
 - Provider-specific error parsing and user-friendly messages
 - Centralized error handling with `useErrorHandler` hook
 - Graceful fallbacks for parsing failures
+
+## Development Best Practices
+
+- **Release Management**:
+  - 确保程序正常运行，正常运行后，更新版本号、Changelog，提交commit

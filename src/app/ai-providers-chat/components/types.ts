@@ -6,6 +6,8 @@ export interface ConversationMessage {
   imageUrl?: string;
   timestamp: Date;
   model?: string;
+  isStreaming?: boolean;
+  streamContent?: string;
 }
 
 // 模型选项类型

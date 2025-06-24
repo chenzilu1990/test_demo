@@ -12,7 +12,8 @@
       "Bash(mv:*)",
       "Bash(npm run lint)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

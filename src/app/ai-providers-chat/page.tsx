@@ -16,6 +16,8 @@ import ChatDialog from './components/ChatDialog';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
 import TemplateGenerator from './components/TemplateGenerator';
+import ConversationList from './components/ConversationList';
+import { useConversations } from './hooks/useConversations';
 import { loadUnifiedTemplates, addTemplate, updateTemplateUsage } from '@/app/prompt-template-settings/utils/dataMigration';
 import { ExtendedPromptTemplate, isParameterizedTemplate } from '@/app/prompt-template-settings/types';
 
@@ -58,6 +60,7 @@ export default function AIChatPage() {
 
   // 新增：侧边栏控制状态
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'conversations' | 'templates'>('conversations');
   
   // 新增：流式传输状态
   const [streamingEnabled, setStreamingEnabled] = useState(() => {
@@ -69,6 +72,33 @@ export default function AIChatPage() {
   
   // 新增：用于停止流式传输的控制器
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  // 对话管理
+  const {
+    conversations,
+    currentConversation,
+    currentConversationId,
+    isLoading: conversationsLoading,
+    error: conversationsError,
+    createNewConversation,
+    selectConversation,
+    deleteCurrentConversation,
+    deleteSpecificConversation,
+    renameConversation,
+    duplicateSpecificConversation,
+    updateCurrentConversationMessages,
+    refreshConversations
+  } = useConversations();
+
+  // 同步当前对话到显示状态
+  useEffect(() => {
+    if (currentConversation) {
+      setConversation(currentConversation.messages);
+    } else {
+      setConversation([]);
+    }
+  }, [currentConversation]);
+
 
   const isDallE3Model = useMemo(() => {
     if (!selectedProviderModel) return false;
@@ -426,7 +456,16 @@ export default function AIChatPage() {
       timestamp: new Date()
     };
 
-    setConversation(prev => [...prev, userMessage]);
+    const updatedConversation = [...conversation, userMessage];
+    setConversation(updatedConversation);
+    
+    // 如果没有当前对话，创建新对话
+    if (!currentConversationId) {
+      createNewConversation(
+        selectedProviderModel ? selectedProviderModel.split(':')[1] : undefined,
+        selectedProviderModel ? selectedProviderModel.split(':')[0] : undefined
+      );
+    }
     setInputPrompt('');
     setIsLoading(true);
     setError('');
@@ -501,15 +540,19 @@ export default function AIChatPage() {
         console.log('图像生成响应:', response);
         console.log('获取到的图像URL:', imageUrl);
 
-        setConversation(prev => [...prev, assistantMessage]);
+        const finalConversation = [...updatedConversation, assistantMessage];
+        setConversation(finalConversation);
+        // 保存到存储
+        if (currentConversationId) {
+          updateCurrentConversationMessages(finalConversation);
+        }
       } else {
         // 文本对话
         const messages: ChatMessage[] = [
-          ...conversation.filter(msg => msg.role !== 'assistant' || !msg.imageUrl).map(msg => ({
+          ...updatedConversation.filter(msg => msg.role !== 'assistant' || !msg.imageUrl).map(msg => ({
             role: msg.role,
             content: msg.content
-          })),
-          { role: 'user' as const, content: inputPrompt }
+          }))
         ];
 
         // 从提示词中提取参数
@@ -540,15 +583,17 @@ export default function AIChatPage() {
           };
 
           // 先添加空消息占位
-          setConversation(prev => [...prev, assistantMessage]);
+          const conversationWithPlaceholder = [...updatedConversation, assistantMessage];
+          setConversation(conversationWithPlaceholder);
 
           // 创建新的 AbortController
           const controller = new AbortController();
           setAbortController(controller);
 
+          let accumulatedContent = '';
+          
           try {
             const stream = provider.chatStream(request);
-            let accumulatedContent = '';
 
             for await (const chunk of stream) {
               // 检查是否被中止
@@ -569,21 +614,33 @@ export default function AIChatPage() {
             }
 
             // 流结束，更新最终状态
-            setConversation(prev => prev.map(msg => 
+            const finalConversation = conversationWithPlaceholder.map(msg => 
               msg.id === assistantMessage.id 
-                ? { ...msg, isStreaming: false, streamContent: undefined }
+                ? { ...msg, content: accumulatedContent, isStreaming: false, streamContent: undefined }
                 : msg
-            ));
+            );
+            setConversation(finalConversation);
+            
+            // 保存到存储
+            if (currentConversationId) {
+              updateCurrentConversationMessages(finalConversation);
+            }
           } catch (streamError: any) {
             console.error('流式传输错误:', streamError);
             
             // 如果是用户中止，只更新状态，不删除消息
             if (streamError.name === 'AbortError' || controller.signal.aborted) {
-              setConversation(prev => prev.map(msg => 
+              const partialConversation = conversationWithPlaceholder.map(msg => 
                 msg.id === assistantMessage.id 
-                  ? { ...msg, isStreaming: false, streamContent: undefined }
+                  ? { ...msg, content: accumulatedContent || msg.streamContent || msg.content, isStreaming: false, streamContent: undefined }
                   : msg
-              ));
+              );
+              setConversation(partialConversation);
+              
+              // 保存到存储
+              if (currentConversationId) {
+                updateCurrentConversationMessages(partialConversation);
+              }
             } else {
               // 其他错误时，移除占位消息
               setConversation(prev => prev.filter(msg => msg.id !== assistantMessage.id));
@@ -608,7 +665,12 @@ export default function AIChatPage() {
             model: modelId
           };
 
-          setConversation(prev => [...prev, assistantMessage]);
+          const finalConversation = [...updatedConversation, assistantMessage];
+          setConversation(finalConversation);
+          // 保存到存储
+          if (currentConversationId) {
+            updateCurrentConversationMessages(finalConversation);
+          }
         }
       }
     } catch (err: any) {
@@ -632,8 +694,12 @@ export default function AIChatPage() {
     }
   };
 
-  // 清空对话
+  // 清空当前对话
   const handleClearConversation = () => {
+    if (currentConversationId) {
+      // 清空当前对话的消息
+      updateCurrentConversationMessages([]);
+    }
     setConversation([]);
     setError('');
   };
@@ -656,41 +722,94 @@ export default function AIChatPage() {
       } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300`}>
         
         {/* 侧边栏头部 */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          {!sidebarCollapsed && (
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">AI 对话助手</h1>
-          )}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            {!sidebarCollapsed && (
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">AI 对话助手</h1>
+            )}
             <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
-          >
-            <svg 
-              className={`w-5 h-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`}
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
+              <svg 
+                className={`w-5 h-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* 标签页切换 */}
+          {!sidebarCollapsed && (
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setSidebarTab('conversations')}
+                className={`flex-1 py-2 px-3 text-sm rounded-md transition-colors ${
+                  sidebarTab === 'conversations'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                💬 对话
+              </button>
+              <button
+                onClick={() => setSidebarTab('templates')}
+                className={`flex-1 py-2 px-3 text-sm rounded-md transition-colors ${
+                  sidebarTab === 'templates'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                📋 模板
+              </button>
+            </div>
+          )}
         </div>
 
         {!sidebarCollapsed ? (
           <>
-            {/* 模型选择区域 */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <ModelSelector
-                selectedProviderModel={selectedProviderModel}
-                setSelectedProviderModel={setSelectedProviderModel}
-                availableModels={availableModels}
-                isImageGenerationModel={isImageGenerationModel()}
-                onNavigateToProviders={handleNavigateToProviders}
-              />
-            </div>
+            {sidebarTab === 'conversations' ? (
+              /* 对话列表 */
+              <div className="flex-1 flex flex-col min-h-0">
+                <ConversationList
+                  conversations={conversations}
+                  currentConversationId={currentConversationId}
+                  isLoading={conversationsLoading}
+                  onSelectConversation={selectConversation}
+                  onCreateNew={() => {
+                    createNewConversation(
+                      selectedProviderModel ? selectedProviderModel.split(':')[1] : undefined,
+                      selectedProviderModel ? selectedProviderModel.split(':')[0] : undefined
+                    );
+                    // 清空当前对话显示
+                    setConversation([]);
+                    setError('');
+                  }}
+                  onDeleteConversation={deleteSpecificConversation}
+                  onRenameConversation={renameConversation}
+                  onDuplicateConversation={duplicateSpecificConversation}
+                />
+              </div>
+            ) : (
+              /* 模板管理 */
+              <>
+                {/* 模型选择区域 */}
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <ModelSelector
+                    selectedProviderModel={selectedProviderModel}
+                    setSelectedProviderModel={setSelectedProviderModel}
+                    availableModels={availableModels}
+                    isImageGenerationModel={isImageGenerationModel()}
+                    onNavigateToProviders={handleNavigateToProviders}
+                  />
+                </div>
 
-            {/* 统一的模板管理区域 */}
-            <div className="flex-1 overflow-y-auto">
+                {/* 统一的模板管理区域 */}
+                <div className="flex-1 overflow-y-auto">
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white">提示词模板</h3>
@@ -848,24 +967,38 @@ export default function AIChatPage() {
                 🗑️ 清空对话记录
               </button>
             </div>
+                </>
+              )}
           </>
         ) : (
           /* 收起状态的侧边栏 */
           <div className="flex-1 flex flex-col items-center py-4 space-y-4">
             <button
               onClick={() => {
-                if (paramTemplates.length > 0) {
-                  setShowParamTemplates(true);
-                } else if (quickTemplates.length > 0) {
-                  setShowTemplates(true);
-                }
+                setSidebarTab('conversations');
+                setSidebarCollapsed(false);
+              }}
+              className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
+              title="对话列表"
+            >
+              <span className="text-lg">💬</span>
+              {conversations.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {conversations.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setSidebarTab('templates');
+                setSidebarCollapsed(false);
               }}
               className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
               title="提示词模板"
             >
               <span className="text-lg">📋</span>
               {(paramTemplates.length > 0 || quickTemplates.length > 0) && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-xs rounded-full flex items-center justify-center">
                   {paramTemplates.length + quickTemplates.length}
                 </span>
               )}

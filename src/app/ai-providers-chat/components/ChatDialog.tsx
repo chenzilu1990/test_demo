@@ -89,7 +89,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
             isUser ? 'text-white' : 'text-gray-900 dark:text-gray-100'
           }`}>
             <MarkdownRenderer 
-              content={msg.content} 
+              content={msg.isStreaming && msg.streamContent !== undefined ? msg.streamContent : msg.content} 
               isUser={isUser}
               className={isUser ? '' : 'prose-sm dark:prose-invert max-w-none'}
             />

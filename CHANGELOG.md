@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-06-24
+
+### Added
+- 🗂️ 多对话管理系统，支持创建、切换、保存多个独立对话
+- 💬 侧边栏对话列表，显示对话历史和实时状态
+- 💾 本地持久化存储，对话数据自动保存到 localStorage
+- 🔄 对话操作功能：重命名、复制、删除对话
+- 🎯 智能对话标题生成，基于首条用户消息自动命名
+- 📑 侧边栏标签页切换，支持对话列表和模板列表视图
+- 🔧 完整的对话管理 Hook (useConversations)
+
+### Fixed
+- 修复流式传输时 AI 回复消息不显示的问题
+- 修复流式传输中断时消息内容丢失的问题
+- 修复对话切换时状态同步问题
+
+### Improved
+- 优化了对话体验，支持多对话并行管理
+- 提升了数据持久化的可靠性
+- 改进了侧边栏交互体验，支持收起/展开
+- 增强了对话列表的视觉效果和操作便利性
+
 ## [0.2.0] - 2025-06-24
 
 ### Added

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-06-25
+
+### Fixed
+- 🐛 **修复上下文信息面板跟随逻辑Bug** - 彻底解决面板定位和跟随鼠标的所有问题
+- 🎯 **统一坐标系统** - 修复mousePosition相对坐标与面板绝对定位的冲突
+- 🔧 **重构CSS定位方式** - 移除CSS类定位冲突，使用精确的内联样式定位
+- 📏 **动态尺寸检测** - 使用panelRef获取实际面板尺寸，提高边界检测准确性
+- 🛡️ **改进边界检测** - 双重边界检测(容器+视口)，确保面板始终可见
+- ⚡ **性能优化** - 添加60fps防抖处理，避免过度更新和内存泄漏
+
+### Improved
+- **精确跟随** - 信息面板现在能够精确跟随鼠标位置，无偏移和跳跃
+- **智能避让** - 自动选择最佳显示位置，永不被边界截断
+- **流畅动画** - 优化过渡效果，提供更加平滑的视觉体验
+- **响应式适配** - 在所有屏幕尺寸下都能正常工作
+
+### Technical Details
+- 修复了mousePosition.y相对坐标与面板绝对定位的坐标系不统一问题
+- 移除right-6/left-6 CSS类与transform冲突，改用fixed定位+内联样式
+- 新增panelRef动态获取面板实际尺寸，替代固定尺寸估算
+- 实现视口边界和容器边界的双重检测机制
+- 添加16ms防抖和清理函数，防止内存泄漏
+
 ## [0.4.0] - 2025-06-25
 
 ### Added

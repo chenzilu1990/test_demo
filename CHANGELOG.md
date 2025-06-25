@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-06-25
+
+### Added
+- 🎯 **上下文感知滚动条 (Context-Aware Scrollbar)** - 全新的可视化组件，提供全局视角的上下文窗口管理
+- 💡 **记忆聚光灯增强** - 改进的透明度调节和上下文状态可视化
+- 📊 **上下文边界检测** - 自动计算并标记上下文窗口的起始和结束位置
+- 🔍 **智能滚动条** - 自定义滚动条替代原生滚动条，提供更精确的导航控制
+- 📏 **上下文窗口可视化** - 直观显示哪些消息在AI的"记忆"中，哪些已超出上下文
+- 🎨 **透明窗口设计** - 上下文窗口区域保持透明，历史消息使用遮罩效果
+
+### Fixed
+- 修复 useContextCalculation 中的 TypeScript 警告
+- 修复 distanceFromWindow 计算逻辑，正确处理负值
+- 修复滚动容器的布局和溢出处理
+
+### Improved
+- **视觉层级优化** - 重新设计滚动条的视觉层级，符合物理直觉
+- **交互体验提升** - 支持点击和拖拽导航，悬停显示详细信息
+- **跨浏览器兼容** - 完全隐藏原生滚动条，在所有主流浏览器中保持一致体验
+- **响应式设计** - 自适应不同屏幕尺寸和暗色模式
+- **性能优化** - 使用高效的滚动监听和实时更新机制
+
+### Technical Details
+- 新增 `ContextAwareScrollbar` 组件，提供独立的滚动条可视化
+- 增强 `useContextCalculation` Hook，返回上下文边界信息
+- 添加 `.scrollbar-hide` CSS 工具类，完全隐藏原生滚动条
+- 实现三层视觉结构：背景层、视口指示器、历史消息遮罩
+
 ## [0.3.0] - 2025-06-24
 
 ### Added

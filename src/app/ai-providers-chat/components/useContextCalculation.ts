@@ -20,6 +20,12 @@ interface ContextCalculationResult {
   activeTokens: number;
   utilizationRate: number;
   remainingTokens: number;
+  contextBoundary: {
+    startIndex: number; // 上下文窗口开始的消息索引
+    endIndex: number; // 上下文窗口结束的消息索引（通常是最新消息）
+    startPercentage: number; // 开始位置的百分比
+    endPercentage: number; // 结束位置的百分比
+  } | null;
 }
 
 export const useContextCalculation = ({
@@ -35,7 +41,8 @@ export const useContextCalculation = ({
         totalTokens: 0,
         activeTokens: 0,
         utilizationRate: 0,
-        remainingTokens: contextWindowTokens
+        remainingTokens: contextWindowTokens,
+        contextBoundary: null
       };
     }
 
@@ -50,7 +57,7 @@ export const useContextCalculation = ({
     const fadingZoneTokens = contextWindowTokens * fadingZoneRatio;
     const activeZoneTokens = contextWindowTokens - fadingZoneTokens;
 
-    const processedMessages = messagesWithTokens.reverse().map((msg, index) => {
+    const processedMessages = messagesWithTokens.reverse().map((msg) => {
       const msgTokens = msg.estimatedTokens;
       const messageStartTokens = cumulativeTokens;
       cumulativeTokens += msgTokens;
@@ -97,12 +104,41 @@ export const useContextCalculation = ({
     const utilizationRate = Math.round((activeTokens / contextWindowTokens) * 100);
     const remainingTokens = Math.max(0, contextWindowTokens - totalTokens);
 
+    // 计算上下文边界
+    let contextBoundary = null;
+    if (processedMessages.length > 0) {
+      // 找到第一条完全在上下文窗口内的消息
+      let startIndex = -1;
+      let endIndex = processedMessages.length - 1; // 最新消息总是结束位置
+      
+      for (let i = 0; i < processedMessages.length; i++) {
+        const msg = processedMessages[i];
+        if (msg.contextInfo && msg.contextInfo.status !== 'inactive') {
+          startIndex = i;
+          break;
+        }
+      }
+
+      if (startIndex !== -1) {
+        const startPercentage = (startIndex / Math.max(1, processedMessages.length - 1)) * 100;
+        const endPercentage = (endIndex / Math.max(1, processedMessages.length - 1)) * 100;
+        
+        contextBoundary = {
+          startIndex,
+          endIndex,
+          startPercentage: Math.max(0, Math.min(100, startPercentage)),
+          endPercentage: Math.max(0, Math.min(100, endPercentage))
+        };
+      }
+    }
+
     return {
       processedMessages,
       totalTokens,
       activeTokens,
       utilizationRate,
-      remainingTokens
+      remainingTokens,
+      contextBoundary
     };
   }, [messages, contextWindowTokens, fadingZoneRatio]);
 };

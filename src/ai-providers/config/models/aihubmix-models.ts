@@ -155,7 +155,7 @@ const aihubmixModels: ModelCard[] = [
     name: 'DeepSeek-R1',
     description: '已升级至最新版本250528；字节火山云开源部署的满血 R1，总参数量 671B，输入最高 64k。目前最稳定，推荐用这个。',
     capabilities: {
-      contextWindowTokens: 64000,
+      contextWindowTokens: 4000,
       functionCall: true,
       json: true,
       reasoning: true,

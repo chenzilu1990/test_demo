@@ -1,6 +1,8 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from 'react';
 import { ConversationMessage } from './types';
 import MarkdownRenderer from './MarkdownRenderer';
+import ContextIndicator from './ContextIndicator';
+import { useContextCalculation } from './useContextCalculation';
 import './markdown-styles.css';
 
 interface ChatDialogProps {
@@ -9,12 +11,36 @@ interface ChatDialogProps {
   onSaveTemplate?: (content: string) => void;
   hasAvailableModels: boolean;
   onNavigateToProviders: () => void;
+  contextWindowTokens?: number;
+  onClearContext?: () => void;
+  onNewConversation?: () => void;
 }
 
-const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSaveTemplate, hasAvailableModels, onNavigateToProviders }) => {
+const ChatDialog: React.FC<ChatDialogProps> = memo(({ 
+  conversation, 
+  error, 
+  onSaveTemplate, 
+  hasAvailableModels, 
+  onNavigateToProviders,
+  contextWindowTokens = 4000,
+  onClearContext,
+  onNewConversation
+}) => {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+
+  // 上下文计算
+  const {
+    processedMessages,
+    totalTokens,
+    activeTokens,
+    utilizationRate,
+    remainingTokens
+  } = useContextCalculation({
+    messages: conversation,
+    contextWindowTokens
+  });
 
   const handleSaveTemplate = useCallback((content: string) => {
     onSaveTemplate?.(content);
@@ -59,19 +85,25 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
   const renderMessage = useCallback((msg: ConversationMessage) => {
     const isUser = msg.role === 'user';
     const showActions = hoveredMessageId === msg.id;
+    const contextInfo = msg.contextInfo;
+    const opacity = contextInfo?.opacity ?? 1.0;
+    const isInactive = contextInfo?.status === 'inactive';
     
     return (
       <div
         key={msg.id}
-        className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}
+        className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 transition-all duration-300`}
+        style={{ opacity }}
         onMouseEnter={() => setHoveredMessageId(msg.id)}
         onMouseLeave={() => setHoveredMessageId(null)}
       >
         <div
-          className={`relative max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
+          className={`relative max-w-[85%] rounded-2xl px-4 py-3 shadow-sm transition-all duration-300 ${
             isUser
-              ? 'bg-blue-500 text-white rounded-br-sm'
-              : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-bl-sm'
+              ? `bg-blue-500 text-white rounded-br-sm ${isInactive ? 'bg-opacity-60' : ''}`
+              : `bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-bl-sm ${
+                  isInactive ? 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700' : ''
+                }`
           }`}
         >
           {/* 消息头部信息 */}
@@ -85,8 +117,10 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
           </div>
 
           {/* 消息内容 */}
-          <div className={`text-sm leading-relaxed ${
-            isUser ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+          <div className={`text-sm leading-relaxed transition-colors duration-300 ${
+            isUser 
+              ? `text-white ${isInactive ? 'text-opacity-70' : ''}` 
+              : `text-gray-900 dark:text-gray-100 ${isInactive ? 'text-gray-500 dark:text-gray-500' : ''}`
           }`}>
             <MarkdownRenderer 
               content={msg.isStreaming && msg.streamContent !== undefined ? msg.streamContent : msg.content} 
@@ -161,9 +195,18 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
 
           {/* 消息状态指示器 */}
           {!isUser && (
-            <div className={`absolute -bottom-1 -left-1 w-2 h-2 rounded-full border-2 border-white dark:border-gray-800 ${
-              msg.isStreaming ? 'bg-blue-400 animate-pulse' : 'bg-green-400'
+            <div className={`absolute -bottom-1 -left-1 w-2 h-2 rounded-full border-2 border-white dark:border-gray-800 transition-all duration-300 ${
+              msg.isStreaming ? 'bg-blue-400 animate-pulse' : 
+              contextInfo?.status === 'active' ? 'bg-green-400' :
+              contextInfo?.status === 'fading' ? 'bg-yellow-400' : 'bg-gray-400'
             }`}></div>
+          )}
+
+          {/* 上下文状态标签 */}
+          {isInactive && (
+            <div className="absolute -top-2 -right-2 px-1.5 py-0.5 bg-gray-400 text-white text-xs rounded-full opacity-75">
+              历史
+            </div>
           )}
         </div>
       </div>
@@ -172,6 +215,19 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
 
   return (
     <div className="h-full bg-gray-50 dark:bg-gray-900 rounded-xl shadow-inner overflow-hidden flex flex-col">
+      {/* 上下文状态指示器 */}
+      {conversation.length > 0 && (
+        <ContextIndicator
+          totalTokens={totalTokens}
+          activeTokens={activeTokens}
+          contextWindowTokens={contextWindowTokens}
+          utilizationRate={utilizationRate}
+          remainingTokens={remainingTokens}
+          onClearContext={onClearContext}
+          onNewConversation={onNewConversation}
+        />
+      )}
+      
       {/* 对话内容区域 */}
       <div
         className="flex-1 overflow-y-auto p-6 space-y-4"
@@ -241,7 +297,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({ conversation, error, onSav
           </div>
         ) : (
           <>
-            {conversation.map(renderMessage)}
+            {processedMessages.map(renderMessage)}
             <div ref={messagesEndRef} />
           </>
         )}

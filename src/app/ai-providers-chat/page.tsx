@@ -213,6 +213,36 @@ export default function AIChatPage() {
     return model?.capabilities.imageGeneration === true;
   };
 
+  // 获取当前模型的上下文窗口限制
+  const getCurrentModelContextWindow = (): number => {
+    if (!provider || !selectedProviderModel) return 4000;
+    const [_, modelId] = selectedProviderModel.split(':');
+    const model = provider.getModelById(modelId);
+    return model?.capabilities.contextWindowTokens || 4000;
+  };
+
+  // 智能清理上下文：保留最近的关键消息
+  const handleClearContext = useCallback(() => {
+    if (conversation.length <= 3) return; // 消息太少不需要清理
+    
+    // 保留最后3条消息（通常包含一次完整的问答）
+    const recentMessages = conversation.slice(-3);
+    setConversation(recentMessages);
+    
+    // 更新当前对话
+    if (currentConversationId) {
+      updateCurrentConversationMessages(recentMessages);
+    }
+  }, [conversation, currentConversationId, updateCurrentConversationMessages]);
+
+  // 创建新对话
+  const handleNewConversation = useCallback(() => {
+    createNewConversation(
+      selectedProviderModel ? selectedProviderModel.split(':')[1] : undefined,
+      selectedProviderModel ? selectedProviderModel.split(':')[0] : undefined
+    );
+  }, [selectedProviderModel, createNewConversation]);
+
   // 从统一数据源加载所有模板
   useEffect(() => {
     try {
@@ -1024,6 +1054,9 @@ export default function AIChatPage() {
             onSaveTemplate={handleSaveTemplate}
             hasAvailableModels={availableModels.length > 0}
             onNavigateToProviders={handleNavigateToProviders}
+            contextWindowTokens={getCurrentModelContextWindow()}
+            onClearContext={handleClearContext}
+            onNewConversation={handleNewConversation}
           />
         </div>
 

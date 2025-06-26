@@ -296,12 +296,12 @@ const ContextAwareScrollbar: React.FC<ContextAwareScrollbarProps> = ({
     
     // 操作建议
     let actionTip = '';
-    if (contextStatus === 'inactive' && distanceFromWindow > 1000) {
-      actionTip = '建议开启新对话，当前位置距离上下文窗口太远';
+    if (contextStatus === 'inactive' && distanceFromWindow > 100) {
+      actionTip = '完全不记得了，建议开启新对话';
     } else if (contextStatus === 'fading') {
-      actionTip = '这些消息可能影响AI回复的准确性';
-    } else if (tokensFromPosition > 3000) {
-      actionTip = '从此位置开始Token较多，考虑精简内容';
+      actionTip = '记忆有点模糊，不太记得了';
+    } else if (contextStatus === 'active') {
+      // actionTip = "上下文充足";
     }
     
     return {

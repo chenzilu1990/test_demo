@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-06-26
+
+### Added
+- 🧹 **智能上下文清理功能** - 全新的上下文管理系统，支持多种清理策略
+- 🎯 **清理策略选择器** - 提供4种智能清理策略：保留最近消息、保留完整对话、智能清理、按百分比清理
+- 👁️ **清理预览功能** - 在执行清理前预览将保留和删除的消息，显示释放的Token数量
+- 📊 **增强的上下文指示器** - 新增下拉菜单界面，提供更详细的上下文管理选项
+- 🎨 **美化的UI组件** - 重新设计的上下文管理界面，提供更好的用户体验
+
+### Improved
+- **智能清理算法** - 基于消息重要性评分的智能清理，保留关键对话内容
+- **策略推荐系统** - 根据当前上下文使用率自动推荐最合适的清理策略
+- **用户交互优化** - 清理操作需要确认，防止误操作
+- **实时预览计算** - 动态显示每种策略的清理效果
+- **响应式设计** - 在移动端和桌面端都有良好的显示效果
+
+### Technical Details
+- 新增 `contextCleanup.ts` 工具模块，实现清理策略的核心逻辑
+- 新增 `ContextCleanupDialog` 组件，提供清理策略选择和预览界面
+- 优化 `ContextIndicator` 组件，添加下拉菜单和更丰富的交互
+- 集成 `useContextCalculation` Hook，实时计算上下文使用率
+- 支持策略扩展，便于未来添加更多清理策略
+
 ## [0.4.1] - 2025-06-25
 
 ### Fixed

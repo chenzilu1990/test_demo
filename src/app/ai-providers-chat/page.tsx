@@ -20,6 +20,9 @@ import ConversationList from './components/ConversationList';
 import { useConversations } from './hooks/useConversations';
 import { loadUnifiedTemplates, addTemplate, updateTemplateUsage } from '@/app/prompt-template-settings/utils/dataMigration';
 import { ExtendedPromptTemplate, isParameterizedTemplate } from '@/app/prompt-template-settings/types';
+import ContextCleanupDialog from './components/ContextCleanupDialog';
+import { CleanupStrategy } from './utils/contextCleanup';
+import { useContextCalculation } from './components/useContextCalculation';
 
 // 定义交互式提示词的选项
 const getBracketOptions = (isDallE3: boolean): BracketParameterOptions => {
@@ -57,6 +60,7 @@ export default function AIChatPage() {
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
   const [activeParamTemplate, setActiveParamTemplate] = useState<PromptTemplate | undefined>(undefined);
   const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
   // 新增：侧边栏控制状态
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -221,19 +225,24 @@ export default function AIChatPage() {
     return model?.capabilities.contextWindowTokens || 4000;
   };
 
-  // 智能清理上下文：保留最近的关键消息
+  // 打开清理对话框
   const handleClearContext = useCallback(() => {
     if (conversation.length <= 3) return; // 消息太少不需要清理
-    
-    // 保留最后3条消息（通常包含一次完整的问答）
-    const recentMessages = conversation.slice(-3);
-    setConversation(recentMessages);
+    setShowCleanupDialog(true);
+  }, [conversation]);
+
+  // 执行清理策略
+  const handleConfirmCleanup = useCallback((strategy: CleanupStrategy) => {
+    const cleanedMessages = strategy.execute(conversation, getCurrentModelContextWindow());
+    setConversation(cleanedMessages);
     
     // 更新当前对话
     if (currentConversationId) {
-      updateCurrentConversationMessages(recentMessages);
+      updateCurrentConversationMessages(cleanedMessages);
     }
-  }, [conversation, currentConversationId, updateCurrentConversationMessages]);
+    
+    setShowCleanupDialog(false);
+  }, [conversation, currentConversationId, updateCurrentConversationMessages, getCurrentModelContextWindow]);
 
   // 创建新对话
   const handleNewConversation = useCallback(() => {
@@ -744,6 +753,12 @@ export default function AIChatPage() {
     router.push('/prompt-template-settings');
   };
 
+  // 计算上下文使用情况
+  const { utilizationRate } = useContextCalculation({
+    messages: conversation,
+    contextWindowTokens: getCurrentModelContextWindow()
+  });
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* 左侧边栏 - 模型选择和模板管理 */}
@@ -1215,6 +1230,16 @@ export default function AIChatPage() {
         provider={provider}
         userPrompt={selectedPrompt}
         availableModels={availableModels}
+      />
+
+      {/* 上下文清理对话框 */}
+      <ContextCleanupDialog
+        isOpen={showCleanupDialog}
+        onClose={() => setShowCleanupDialog(false)}
+        onConfirm={handleConfirmCleanup}
+        messages={conversation}
+        contextWindowTokens={getCurrentModelContextWindow()}
+        utilizationRate={utilizationRate}
       />
     </div>
   );

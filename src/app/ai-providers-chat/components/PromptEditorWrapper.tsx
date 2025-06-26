@@ -141,7 +141,7 @@ export default function PromptEditorWrapper({
             { id: "6", command: "proofread", description: "校对" },
             { id: "7", command: "improve", description: "改进" },
             { id: "8", command: "clear message", description: "清除消息" },
-            { id: "9", command: "clear context", description: "清除上下文" },
+            { id: "9", command: "clear context", description: "清理上下文" },
           ]}
           onSelectCommand={(command) => {
             // Handle command selection if needed

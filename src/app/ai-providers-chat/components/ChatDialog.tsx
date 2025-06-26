@@ -1,5 +1,6 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from 'react';
-import { ConversationMessage } from './types';
+import { ConversationMessage, Conversation } from './types';
+import { getContextMessages, isMessageInContext } from '../utils/contextManager';
 import MarkdownRenderer from './MarkdownRenderer';
 import ContextIndicator from './ContextIndicator';
 import ContextAwareScrollbar from './ContextAwareScrollbar';
@@ -7,7 +8,7 @@ import { useContextCalculation } from './useContextCalculation';
 import './markdown-styles.css';
 
 interface ChatDialogProps {
-  conversation: ConversationMessage[];
+  conversation: Conversation | null;
   error: string;
   onSaveTemplate?: (content: string) => void;
   hasAvailableModels: boolean;
@@ -32,6 +33,10 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
 
+  // 获取上下文消息和处理消息
+  const contextMessages = conversation ? getContextMessages(conversation) : [];
+  const allMessages = conversation ? conversation.messages : [];
+  
   // 上下文计算
   const {
     processedMessages,
@@ -41,7 +46,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
     remainingTokens,
     contextBoundary
   } = useContextCalculation({
-    messages: conversation,
+    messages: contextMessages,
     contextWindowTokens
   });
 
@@ -67,7 +72,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
   // 当有新消息时自动滚动
   useEffect(() => {
     scrollToBottom();
-  }, [conversation.length, scrollToBottom]);
+  }, [allMessages.length, scrollToBottom]);
 
   // 监听滚动事件，判断是否需要自动滚动
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -219,7 +224,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
   return (
     <div className="h-full bg-gray-50 dark:bg-gray-900 rounded-xl shadow-inner overflow-hidden flex flex-col">
       {/* 上下文状态指示器 */}
-      {conversation.length > 0 && (
+      {allMessages.length > 0 && (
         <ContextIndicator
           totalTokens={totalTokens}
           activeTokens={activeTokens}
@@ -238,7 +243,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
           className="h-full overflow-y-auto p-6 space-y-4 scrollbar-hide"
           onScroll={handleScroll}
         >
-        {hasAvailableModels && conversation.length === 0 ? (
+        {hasAvailableModels && allMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mb-6 shadow-lg">
               <svg
@@ -302,7 +307,19 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
           </div>
         ) : (
           <>
-            {processedMessages.map(renderMessage)}
+            {allMessages.map(msg => {
+              const inContext = conversation ? isMessageInContext(conversation, msg.id) : false;
+              const contextMsg = inContext ? processedMessages.find(p => p.id === msg.id) : null;
+              return renderMessage({
+                ...msg,
+                contextInfo: contextMsg?.contextInfo || {
+                  status: 'inactive',
+                  opacity: 0.6,
+                  tokenCount: 0,
+                  distanceFromWindow: 0
+                }
+              });
+            })}
             <div ref={messagesEndRef} />
           </>
         )}
@@ -357,9 +374,9 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
         </div>
         
         {/* 上下文感知滚动条 */}
-        {processedMessages.length > 0 && (
+        {allMessages.length > 0 && (
           <ContextAwareScrollbar
-            messages={processedMessages}
+            messages={allMessages}
             scrollContainerRef={scrollContainerRef}
             contextBoundary={contextBoundary}
           />

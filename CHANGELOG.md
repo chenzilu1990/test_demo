@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-06-26
+
+### Added
+- 🔄 **上下文与历史记录分离架构** - 完全分离对话历史记录和AI上下文窗口概念
+- 🆔 **基于消息ID的上下文管理** - 使用contextMessageIds管理上下文，避免数据冗余
+- 🛠️ **上下文管理工具模块** - 完整的contextManager工具集，支持上下文操作
+- 🔄 **自动数据迁移** - 无缝迁移老格式数据到新的contextMessageIds架构
+- 📊 **智能上下文指示** - UI清晰区分历史记录和当前上下文消息
+
+### Changed
+- **清理功能重构** - 清理操作只影响contextMessageIds，完整保留所有历史记录
+- **AI请求优化** - AI只接收contextMessageIds指定的消息，提升上下文精确度
+- **存储架构升级** - Conversation接口使用contextMessageIds替代contextMessages数组
+
+### Improved
+- **内存使用优化** - contextMessages作为messages的视图，无数据重复存储
+- **灵活上下文选择** - 支持非连续的上下文消息选择和管理
+- **用户体验提升** - 历史记录永不丢失，只影响AI的上下文窗口
+
+### Technical Details
+- 新增 `contextManager.ts` 工具模块，提供完整的上下文操作API
+- 重构 `conversationStorage.ts`，支持contextMessageIds存储和迁移
+- 升级 `useConversations` Hook，新增contextMessageIds管理方法
+- 优化清理策略，返回消息ID数组而非消息对象
+- 实现向后兼容的数据迁移逻辑
+
 ## [0.5.0] - 2025-06-26
 
 ### Added

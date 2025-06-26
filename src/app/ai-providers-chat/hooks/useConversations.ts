@@ -9,11 +9,13 @@ import {
   createConversation,
   updateConversationTitle,
   updateConversationMessages,
+  updateConversationContextIds,
   getCurrentConversationId,
   setCurrentConversationId,
   clearCurrentConversationId,
   duplicateConversation
 } from '../utils/conversationStorage';
+import { getContextMessages } from '../utils/contextManager';
 
 export interface UseConversationsReturn {
   // 对话列表
@@ -36,6 +38,8 @@ export interface UseConversationsReturn {
   duplicateCurrentConversation: () => string | null;
   duplicateSpecificConversation: (conversationId: string) => string | null;
   updateCurrentConversationMessages: (messages: ConversationMessage[]) => void;
+  updateCurrentConversationContextIds: (contextIds: string[]) => void;
+  getCurrentContextMessages: () => ConversationMessage[];
   refreshConversations: () => void;
 }
 
@@ -263,6 +267,7 @@ export function useConversations(): UseConversationsReturn {
         setCurrentConversation({
           ...currentConversation,
           messages,
+          contextMessageIds: messages.map(msg => msg.id), // 同步更新contextMessageIds
           updatedAt: new Date()
         });
       }
@@ -274,6 +279,36 @@ export function useConversations(): UseConversationsReturn {
       setError('更新对话消息失败');
     }
   }, [currentConversationId, currentConversation, refreshConversations]);
+
+  // 更新当前对话的上下文消息ID
+  const updateCurrentConversationContextIds = useCallback((contextIds: string[]) => {
+    if (!currentConversationId) return;
+    
+    try {
+      updateConversationContextIds(currentConversationId, contextIds);
+      
+      // 更新当前对话状态
+      if (currentConversation) {
+        setCurrentConversation({
+          ...currentConversation,
+          contextMessageIds: contextIds,
+          updatedAt: new Date()
+        });
+      }
+      
+      // 刷新对话列表
+      refreshConversations();
+    } catch (err) {
+      console.error('Failed to update conversation context ids:', err);
+      setError('更新对话上下文失败');
+    }
+  }, [currentConversationId, currentConversation, refreshConversations]);
+
+  // 获取当前对话的上下文消息
+  const getCurrentContextMessages = useCallback((): ConversationMessage[] => {
+    if (!currentConversation) return [];
+    return getContextMessages(currentConversation);
+  }, [currentConversation]);
 
   return {
     conversations,
@@ -289,6 +324,8 @@ export function useConversations(): UseConversationsReturn {
     duplicateCurrentConversation,
     duplicateSpecificConversation,
     updateCurrentConversationMessages,
+    updateCurrentConversationContextIds,
+    getCurrentContextMessages,
     refreshConversations
   };
 }

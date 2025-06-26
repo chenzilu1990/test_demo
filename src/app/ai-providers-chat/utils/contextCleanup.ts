@@ -1,12 +1,15 @@
-import { ConversationMessage } from '../components/types';
+import { ConversationMessage, Conversation } from '../components/types';
+import { getContextMessages } from './contextManager';
 
 export interface CleanupStrategy {
   id: string;
   name: string;
   description: string;
   icon: string;
-  execute: (messages: ConversationMessage[], contextWindowTokens: number) => ConversationMessage[];
-  preview?: (messages: ConversationMessage[], contextWindowTokens: number) => {
+  execute: (conversation: Conversation, contextWindowTokens?: number) => string[];
+  preview?: (conversation: Conversation, contextWindowTokens?: number) => {
+    keptMessageIds: string[];
+    removedMessageIds: string[];
     keptMessages: ConversationMessage[];
     removedMessages: ConversationMessage[];
     savedTokens: number;
@@ -34,14 +37,16 @@ export const recentMessagesStrategy: CleanupStrategy = {
   name: '保留最近消息',
   description: '保留最近的3-5条消息',
   icon: '🕐',
-  execute: (messages: ConversationMessage[]) => {
-    return messages.slice(-5);
+  execute: (conversation: Conversation, contextWindowTokens?: number) => {
+    return conversation.messages.slice(-5).map(msg => msg.id);
   },
-  preview: (messages: ConversationMessage[]) => {
-    const keptMessages = messages.slice(-5);
-    const removedMessages = messages.slice(0, -5);
+  preview: (conversation: Conversation, contextWindowTokens?: number) => {
+    const keptMessages = conversation.messages.slice(-5);
+    const removedMessages = conversation.messages.slice(0, -5);
+    const keptMessageIds = keptMessages.map(m => m.id);
+    const removedMessageIds = removedMessages.map(m => m.id);
     const savedTokens = calculateTotalTokens(removedMessages);
-    return { keptMessages, removedMessages, savedTokens };
+    return { keptMessageIds, removedMessageIds, keptMessages, removedMessages, savedTokens };
   }
 };
 
@@ -51,7 +56,8 @@ export const conversationPairsStrategy: CleanupStrategy = {
   name: '保留完整对话',
   description: '保留最近2轮完整的问答对话',
   icon: '💬',
-  execute: (messages: ConversationMessage[], contextWindowTokens: number) => {
+  execute: (conversation: Conversation, contextWindowTokens?: number) => {
+    const messages = conversation.messages;
     const pairs: ConversationMessage[] = [];
     let pairCount = 0;
     
@@ -67,14 +73,16 @@ export const conversationPairsStrategy: CleanupStrategy = {
       }
     }
     
-    return pairs;
+    return pairs.map(msg => msg.id);
   },
-  preview: (messages: ConversationMessage[], contextWindowTokens: number) => {
-    const keptMessages = conversationPairsStrategy.execute(messages, contextWindowTokens);
-    const keptIds = new Set(keptMessages.map(m => m.id));
-    const removedMessages = messages.filter(m => !keptIds.has(m.id));
+  preview: (conversation: Conversation, contextWindowTokens?: number) => {
+    const keptMessageIds = conversationPairsStrategy.execute(conversation, contextWindowTokens);
+    const keptIdSet = new Set(keptMessageIds);
+    const keptMessages = conversation.messages.filter(m => keptIdSet.has(m.id));
+    const removedMessages = conversation.messages.filter(m => !keptIdSet.has(m.id));
+    const removedMessageIds = removedMessages.map(m => m.id);
     const savedTokens = calculateTotalTokens(removedMessages);
-    return { keptMessages, removedMessages, savedTokens };
+    return { keptMessageIds, removedMessageIds, keptMessages, removedMessages, savedTokens };
   }
 };
 
@@ -84,7 +92,8 @@ export const smartCleanupStrategy: CleanupStrategy = {
   name: '智能清理',
   description: '保留重要消息，清理冗长的历史对话',
   icon: '🧠',
-  execute: (messages: ConversationMessage[], contextWindowTokens?: number) => {
+  execute: (conversation: Conversation, contextWindowTokens?: number) => {
+    const messages = conversation.messages;
     // 计算每条消息的重要性得分
     const scoredMessages = messages.map((msg, index) => {
       let score = 0;
@@ -131,14 +140,16 @@ export const smartCleanupStrategy: CleanupStrategy = {
       return indexA - indexB;
     });
     
-    return keptMessages;
+    return keptMessages.map(msg => msg.id);
   },
-  preview: (messages: ConversationMessage[], contextWindowTokens: number) => {
-    const keptMessages = smartCleanupStrategy.execute(messages, contextWindowTokens);
-    const keptIds = new Set(keptMessages.map(m => m.id));
-    const removedMessages = messages.filter(m => !keptIds.has(m.id));
+  preview: (conversation: Conversation, contextWindowTokens?: number) => {
+    const keptMessageIds = smartCleanupStrategy.execute(conversation, contextWindowTokens);
+    const keptIdSet = new Set(keptMessageIds);
+    const keptMessages = conversation.messages.filter(m => keptIdSet.has(m.id));
+    const removedMessages = conversation.messages.filter(m => !keptIdSet.has(m.id));
+    const removedMessageIds = removedMessages.map(m => m.id);
     const savedTokens = calculateTotalTokens(removedMessages);
-    return { keptMessages, removedMessages, savedTokens };
+    return { keptMessageIds, removedMessageIds, keptMessages, removedMessages, savedTokens };
   }
 };
 
@@ -148,16 +159,20 @@ export const percentageCleanupStrategy: CleanupStrategy = {
   name: '清理前半部分',
   description: '保留后50%的对话内容',
   icon: '📊',
-  execute: (messages: ConversationMessage[]) => {
+  execute: (conversation: Conversation, contextWindowTokens?: number) => {
+    const messages = conversation.messages;
     const halfIndex = Math.floor(messages.length / 2);
-    return messages.slice(halfIndex);
+    return messages.slice(halfIndex).map(msg => msg.id);
   },
-  preview: (messages: ConversationMessage[]) => {
+  preview: (conversation: Conversation, contextWindowTokens?: number) => {
+    const messages = conversation.messages;
     const halfIndex = Math.floor(messages.length / 2);
     const keptMessages = messages.slice(halfIndex);
     const removedMessages = messages.slice(0, halfIndex);
+    const keptMessageIds = keptMessages.map(m => m.id);
+    const removedMessageIds = removedMessages.map(m => m.id);
     const savedTokens = calculateTotalTokens(removedMessages);
-    return { keptMessages, removedMessages, savedTokens };
+    return { keptMessageIds, removedMessageIds, keptMessages, removedMessages, savedTokens };
   }
 };
 
@@ -171,12 +186,12 @@ export const CLEANUP_STRATEGIES: CleanupStrategy[] = [
 
 // 获取策略建议
 export const getRecommendedStrategy = (
-  messages: ConversationMessage[], 
+  conversation: Conversation, 
   contextWindowTokens: number,
   utilizationRate: number
 ): CleanupStrategy => {
   // 如果消息很少，使用保留最近消息策略
-  if (messages.length <= 10) {
+  if (conversation.messages.length <= 10) {
     return recentMessagesStrategy;
   }
   

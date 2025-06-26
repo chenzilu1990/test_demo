@@ -34,6 +34,8 @@ export interface Conversation {
   id: string;
   title: string;
   messages: ConversationMessage[];
+  contextMessageIds: string[];  // 上下文中的消息ID列表
+  
   createdAt: Date;
   updatedAt: Date;
   model?: string;

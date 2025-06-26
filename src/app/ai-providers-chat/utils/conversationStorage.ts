@@ -1,4 +1,5 @@
 import { Conversation, ConversationMessage, ConversationMeta } from '../components/types';
+import { migrateConversationToContextIds } from './contextManager';
 
 const CONVERSATIONS_STORAGE_KEY = 'ai-chat-conversations';
 const CURRENT_CONVERSATION_KEY = 'ai-chat-current-conversation';
@@ -35,16 +36,19 @@ export function loadConversations(): Conversation[] {
     if (!stored) return [];
     
     const conversations = JSON.parse(stored);
-    // 转换日期字符串为Date对象
-    return conversations.map((conv: any) => ({
-      ...conv,
-      createdAt: new Date(conv.createdAt),
-      updatedAt: new Date(conv.updatedAt),
-      messages: conv.messages.map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
-      }))
-    }));
+    // 转换日期字符串为Date对象，并进行数据迁移
+    return conversations.map((conv: any) => {
+      const migratedConv = migrateConversationToContextIds(conv);
+      return {
+        ...migratedConv,
+        createdAt: new Date(migratedConv.createdAt),
+        updatedAt: new Date(migratedConv.updatedAt),
+        messages: migratedConv.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      };
+    });
   } catch (error) {
     console.error('Failed to load conversations:', error);
     return [];
@@ -126,6 +130,7 @@ export function createConversation(model?: string, provider?: string): Conversat
     id: generateConversationId(),
     title: '新对话',
     messages: [],
+    contextMessageIds: [], // 初始化为空的上下文ID列表
     createdAt: now,
     updatedAt: now,
     model,
@@ -167,6 +172,8 @@ export function updateConversationMessages(conversationId: string, messages: Con
     
     if (conversation) {
       conversation.messages = messages;
+      // 自动更新contextMessageIds，保持同步
+      conversation.contextMessageIds = messages.map(msg => msg.id);
       conversation.updatedAt = new Date();
       
       // 如果是第一条用户消息，自动生成标题
@@ -178,6 +185,26 @@ export function updateConversationMessages(conversationId: string, messages: Con
     }
   } catch (error) {
     console.error('Failed to update conversation messages:', error);
+  }
+}
+
+/**
+ * 更新对话的上下文消息ID
+ */
+export function updateConversationContextIds(conversationId: string, contextMessageIds: string[]): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const conversations = loadConversations();
+    const conversation = conversations.find(conv => conv.id === conversationId);
+    
+    if (conversation) {
+      conversation.contextMessageIds = contextMessageIds;
+      conversation.updatedAt = new Date();
+      saveConversation(conversation);
+    }
+  } catch (error) {
+    console.error('Failed to update conversation context ids:', error);
   }
 }
 

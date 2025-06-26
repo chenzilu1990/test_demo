@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ConversationMessage } from './types';
+import { ConversationMessage, Conversation } from './types';
 import { CLEANUP_STRATEGIES, CleanupStrategy, getRecommendedStrategy } from '../utils/contextCleanup';
+import { getContextMessages } from '../utils/contextManager';
 
 interface ContextCleanupDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (strategy: CleanupStrategy) => void;
-  messages: ConversationMessage[];
+  onConfirm: (contextMessageIds: string[]) => void;
+  conversation: Conversation;
   contextWindowTokens: number;
   utilizationRate: number;
 }
@@ -15,7 +16,7 @@ const ContextCleanupDialog: React.FC<ContextCleanupDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  messages,
+  conversation,
   contextWindowTokens,
   utilizationRate
 }) => {
@@ -28,19 +29,19 @@ const ContextCleanupDialog: React.FC<ContextCleanupDialogProps> = ({
 
   // 初始化推荐策略
   useEffect(() => {
-    if (isOpen && messages.length > 0) {
-      const recommended = getRecommendedStrategy(messages, contextWindowTokens, utilizationRate);
+    if (isOpen && conversation.messages.length > 0) {
+      const recommended = getRecommendedStrategy(conversation, contextWindowTokens, utilizationRate);
       setSelectedStrategy(recommended);
     }
-  }, [isOpen, messages, contextWindowTokens, utilizationRate]);
+  }, [isOpen, conversation, contextWindowTokens, utilizationRate]);
 
   // 更新预览
   useEffect(() => {
     if (selectedStrategy && selectedStrategy.preview) {
-      const previewResult = selectedStrategy.preview(messages, contextWindowTokens);
+      const previewResult = selectedStrategy.preview(conversation, contextWindowTokens);
       setPreview(previewResult);
     }
-  }, [selectedStrategy, messages, contextWindowTokens]);
+  }, [selectedStrategy, conversation, contextWindowTokens]);
 
   if (!isOpen) return null;
 
@@ -97,7 +98,7 @@ const ContextCleanupDialog: React.FC<ContextCleanupDialogProps> = ({
               />
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>当前消息数: {messages.length}</span>
+              <span>当前消息数: {conversation.messages.length}</span>
               <span>上下文窗口: {formatTokenCount(contextWindowTokens)} tokens</span>
             </div>
           </div>
@@ -108,7 +109,7 @@ const ContextCleanupDialog: React.FC<ContextCleanupDialogProps> = ({
               选择清理策略
             </h3>
             {CLEANUP_STRATEGIES.map((strategy) => {
-              const recommended = getRecommendedStrategy(messages, contextWindowTokens, utilizationRate);
+              const recommended = getRecommendedStrategy(conversation, contextWindowTokens, utilizationRate);
               const isRecommended = recommended.id === strategy.id;
               
               return (
@@ -154,7 +155,7 @@ const ContextCleanupDialog: React.FC<ContextCleanupDialogProps> = ({
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-700 dark:text-gray-300">将保留消息数:</span>
                   <span className="font-mono text-gray-900 dark:text-white">
-                    {preview.keptMessages.length} / {messages.length}
+                    {preview.keptMessages.length} / {conversation.messages.length}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -216,7 +217,12 @@ const ContextCleanupDialog: React.FC<ContextCleanupDialogProps> = ({
                 取消
               </button>
               <button
-                onClick={() => selectedStrategy && onConfirm(selectedStrategy)}
+                onClick={() => {
+                  if (selectedStrategy) {
+                    const contextIds = selectedStrategy.execute(conversation, contextWindowTokens);
+                    onConfirm(contextIds);
+                  }
+                }}
                 disabled={!selectedStrategy}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >

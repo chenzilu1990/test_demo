@@ -21,7 +21,6 @@ import { useConversations } from './hooks/useConversations';
 import { loadUnifiedTemplates, addTemplate, updateTemplateUsage } from '@/app/prompt-template-settings/utils/dataMigration';
 import { ExtendedPromptTemplate, isParameterizedTemplate } from '@/app/prompt-template-settings/types';
 import ContextCleanupDialog from './components/ContextCleanupDialog';
-import { CleanupStrategy } from './utils/contextCleanup';
 import { useContextCalculation } from './components/useContextCalculation';
 
 // 定义交互式提示词的选项
@@ -91,6 +90,8 @@ export default function AIChatPage() {
     renameConversation,
     duplicateSpecificConversation,
     updateCurrentConversationMessages,
+    updateCurrentConversationContextIds,
+    getCurrentContextMessages,
     refreshConversations
   } = useConversations();
 
@@ -232,17 +233,14 @@ export default function AIChatPage() {
   }, [conversation]);
 
   // 执行清理策略
-  const handleConfirmCleanup = useCallback((strategy: CleanupStrategy) => {
-    const cleanedMessages = strategy.execute(conversation, getCurrentModelContextWindow());
-    setConversation(cleanedMessages);
-    
-    // 更新当前对话
+  const handleConfirmCleanup = useCallback((contextMessageIds: string[]) => {
+    // 更新当前对话的上下文消息ID
     if (currentConversationId) {
-      updateCurrentConversationMessages(cleanedMessages);
+      updateCurrentConversationContextIds(contextMessageIds);
     }
     
     setShowCleanupDialog(false);
-  }, [conversation, currentConversationId, updateCurrentConversationMessages, getCurrentModelContextWindow]);
+  }, [currentConversationId, updateCurrentConversationContextIds]);
 
   // 创建新对话
   const handleNewConversation = useCallback(() => {
@@ -586,9 +584,11 @@ export default function AIChatPage() {
           updateCurrentConversationMessages(finalConversation);
         }
       } else {
-        // 文本对话
+        // 文本对话 - 使用上下文消息
+        const contextMsgs = currentConversationId ? getCurrentContextMessages() : [];
+        const allContextMessages = [...contextMsgs, userMessage]; // 包含新的用户消息
         const messages: ChatMessage[] = [
-          ...updatedConversation.filter(msg => msg.role !== 'assistant' || !msg.imageUrl).map(msg => ({
+          ...allContextMessages.filter(msg => msg.role !== 'assistant' || !msg.imageUrl).map(msg => ({
             role: msg.role,
             content: msg.content
           }))
@@ -754,8 +754,9 @@ export default function AIChatPage() {
   };
 
   // 计算上下文使用情况
+  const contextMessages = currentConversation ? getCurrentContextMessages() : [];
   const { utilizationRate } = useContextCalculation({
-    messages: conversation,
+    messages: contextMessages,
     contextWindowTokens: getCurrentModelContextWindow()
   });
 
@@ -1064,7 +1065,7 @@ export default function AIChatPage() {
         {/* 对话区域 - 占据大部分空间 */}
         <div className="flex-1 p-4 min-h-0">
           <ChatDialog
-            conversation={conversation}
+            conversation={currentConversation}
             error={error}
             onSaveTemplate={handleSaveTemplate}
             hasAvailableModels={availableModels.length > 0}
@@ -1233,14 +1234,16 @@ export default function AIChatPage() {
       />
 
       {/* 上下文清理对话框 */}
-      <ContextCleanupDialog
-        isOpen={showCleanupDialog}
-        onClose={() => setShowCleanupDialog(false)}
-        onConfirm={handleConfirmCleanup}
-        messages={conversation}
-        contextWindowTokens={getCurrentModelContextWindow()}
-        utilizationRate={utilizationRate}
-      />
+      {currentConversation && (
+        <ContextCleanupDialog
+          isOpen={showCleanupDialog}
+          onClose={() => setShowCleanupDialog(false)}
+          onConfirm={handleConfirmCleanup}
+          conversation={currentConversation}
+          contextWindowTokens={getCurrentModelContextWindow()}
+          utilizationRate={utilizationRate}
+        />
+      )}
     </div>
   );
 }

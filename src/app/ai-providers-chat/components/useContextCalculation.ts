@@ -35,6 +35,7 @@ export const useContextCalculation = ({
 }: UseContextCalculationProps): ContextCalculationResult => {
   
   return useMemo(() => {
+    // 快速返回空结果，避免中间状态
     if (!messages.length || !contextWindowTokens) {
       return {
         processedMessages: messages,

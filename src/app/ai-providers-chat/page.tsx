@@ -75,6 +75,32 @@ export default function AIChatPage() {
   
   // 新增：用于停止流式传输的控制器
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  
+  // 消息状态机类型定义
+  type MessageState = 'idle' | 'sending' | 'streaming' | 'completing' | 'error';
+  
+  // 新增：消息状态管理，防止状态覆盖和竞态条件
+  const [messageOperationState, setMessageOperationState] = useState<{
+    state: MessageState;
+    sendingMessageId: string | null;
+    assistantMessageId: string | null;
+    lastOperation: string;
+  }>({
+    state: 'idle',
+    sendingMessageId: null,
+    assistantMessageId: null,
+    lastOperation: 'none'
+  });
+
+  // 状态机转换函数
+  const updateMessageState = useCallback((newState: MessageState, messageIds?: { sending?: string; assistant?: string }, operation?: string) => {
+    setMessageOperationState(prev => ({
+      state: newState,
+      sendingMessageId: messageIds?.sending ?? prev.sendingMessageId,
+      assistantMessageId: messageIds?.assistant ?? prev.assistantMessageId,
+      lastOperation: operation ?? prev.lastOperation
+    }));
+  }, []);
 
   // 对话管理
   const {
@@ -95,14 +121,38 @@ export default function AIChatPage() {
     refreshConversations
   } = useConversations();
 
-  // 同步当前对话到显示状态
+  // 同步当前对话到显示状态 - 基于状态机的防护机制
   useEffect(() => {
+    // 根据状态机状态决定是否允许状态同步
+    const isActiveOperation = messageOperationState.state !== 'idle';
+    
+    if (isActiveOperation) {
+      // 在活跃操作期间，不覆盖本地状态
+      return;
+    }
+    
     if (currentConversation) {
+      // 检查是否有正在发送的消息需要保留
+      const existingMessages = conversation;
+      const newMessages = currentConversation.messages;
+      
+      // 如果当前显示的消息比存储的多，可能有新消息正在发送
+      if (existingMessages.length > newMessages.length) {
+        const potentialNewMessages = existingMessages.slice(newMessages.length);
+        // 检查是否有正在流式传输的消息
+        const hasStreamingMessage = potentialNewMessages.some(msg => msg.isStreaming);
+        
+        if (hasStreamingMessage) {
+          // 保留正在流式传输的消息，不覆盖
+          return;
+        }
+      }
+      
       setConversation(currentConversation.messages);
     } else {
       setConversation([]);
     }
-  }, [currentConversation]);
+  }, [currentConversation, messageOperationState.state, conversation]);
 
 
   const isDallE3Model = useMemo(() => {
@@ -485,7 +535,7 @@ export default function AIChatPage() {
   const handleSendMessage = async () => {
     if (!inputPrompt.trim() || !provider || !selectedProviderModel || isLoading) return;
 
-    const [providerId, modelId] = selectedProviderModel.split(':');
+    const [, modelId] = selectedProviderModel.split(':');
     const userMessage: ConversationMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -494,18 +544,38 @@ export default function AIChatPage() {
     };
 
     const updatedConversation = [...conversation, userMessage];
-    setConversation(updatedConversation);
     
-    // 如果没有当前对话，创建新对话
-    if (!currentConversationId) {
-      createNewConversation(
-        selectedProviderModel ? selectedProviderModel.split(':')[1] : undefined,
-        selectedProviderModel ? selectedProviderModel.split(':')[0] : undefined
-      );
-    }
+    // 设置状态机为发送状态
+    updateMessageState('sending', { sending: userMessage.id }, 'user_message_sent');
+    
+    // 立即更新本地状态
+    setConversation(updatedConversation);
     setInputPrompt('');
     setIsLoading(true);
     setError('');
+    
+    // 处理对话创建和消息持久化
+    let conversationId = currentConversationId;
+    try {
+      if (!conversationId) {
+        // 创建新对话，并立即包含用户消息
+        conversationId = createNewConversation(
+          selectedProviderModel ? selectedProviderModel.split(':')[1] : undefined,
+          selectedProviderModel ? selectedProviderModel.split(':')[0] : undefined
+        );
+        
+        // 立即保存用户消息到新创建的对话
+        if (conversationId) {
+          updateCurrentConversationMessages(updatedConversation);
+        }
+      } else {
+        // 如果对话已存在，立即保存用户消息
+        updateCurrentConversationMessages(updatedConversation);
+      }
+    } catch (persistError) {
+      console.error('Failed to persist user message:', persistError);
+      // 即使持久化失败，也保持本地状态不变，确保用户看到消息
+    }
 
     try {
       if (isImageGenerationModel()) {
@@ -629,7 +699,82 @@ export default function AIChatPage() {
           const controller = new AbortController();
           setAbortController(controller);
 
-          let accumulatedContent = '';
+          // 更新状态机为流式传输状态
+          updateMessageState('streaming', { assistant: assistantMessage.id }, 'stream_started');
+
+          // 智能流式内容状态管理
+          const streamState = {
+            content: '',
+            lastUpdateTime: 0,
+            chunkCount: 0,
+            totalCharacters: 0,
+            updateMode: 'fast' as 'fast' | 'normal' | 'burst',
+            pendingTimeout: null as NodeJS.Timeout | null
+          };
+          
+          // 动态调整更新策略
+          const getUpdateStrategy = (contentLength: number, timeDelta: number): { mode: 'fast' | 'normal' | 'burst', throttleMs: number } => {
+            const charactersPerSecond = contentLength / (timeDelta / 1000);
+            
+            // 根据流速和内容特征确定更新模式
+            if (charactersPerSecond > 100) {
+              return { mode: 'burst' as const, throttleMs: 50 }; // 高速流：降低频率避免卡顿
+            } else if (charactersPerSecond > 20) {
+              return { mode: 'normal' as const, throttleMs: 25 }; // 正常流速：平衡体验
+            } else {
+              return { mode: 'fast' as const, throttleMs: 8 }; // 慢速流：立即更新以获得最佳响应
+            }
+          };
+          
+          // 智能内容同步函数
+          const syncStreamContent = (newContent: string, isComplete = false) => {
+            const now = performance.now();
+            const previousLength = streamState.content.length;
+            streamState.content = newContent;
+            streamState.chunkCount++;
+            streamState.totalCharacters = newContent.length;
+            
+            const timeSinceLastUpdate = now - streamState.lastUpdateTime;
+            const contentDelta = newContent.length - previousLength;
+            
+            // 获取当前最佳更新策略
+            const strategy = getUpdateStrategy(streamState.totalCharacters, now - streamState.lastUpdateTime || 1);
+            streamState.updateMode = strategy.mode;
+            
+            const updateUI = () => {
+              setConversation(prev => prev.map(msg => 
+                msg.id === assistantMessage.id 
+                  ? { 
+                      ...msg, 
+                      content: streamState.content,
+                      streamContent: isComplete ? undefined : streamState.content,
+                      isStreaming: !isComplete
+                    }
+                  : msg
+              ));
+              streamState.lastUpdateTime = now;
+              streamState.pendingTimeout = null;
+            };
+            
+            // 决定更新时机
+            const shouldUpdateImmediately = isComplete || 
+                                           streamState.updateMode === 'fast' ||
+                                           (contentDelta <= 20 && timeSinceLastUpdate > 100) ||
+                                           timeSinceLastUpdate > strategy.throttleMs;
+            
+            if (shouldUpdateImmediately) {
+              // 清除待定的更新
+              if (streamState.pendingTimeout) {
+                clearTimeout(streamState.pendingTimeout);
+                streamState.pendingTimeout = null;
+              }
+              updateUI();
+            } else if (!streamState.pendingTimeout) {
+              // 安排延迟更新
+              const delay = Math.max(strategy.throttleMs - timeSinceLastUpdate, 5);
+              streamState.pendingTimeout = setTimeout(updateUI, delay);
+            }
+          };
           
           try {
             const stream = provider.chatStream(request);
@@ -641,52 +786,92 @@ export default function AIChatPage() {
               }
               
               if (chunk.choices && chunk.choices[0]?.delta?.content) {
-                accumulatedContent += chunk.choices[0].delta.content;
-                
-                // 更新流式内容
-                setConversation(prev => prev.map(msg => 
-                  msg.id === assistantMessage.id 
-                    ? { ...msg, content: accumulatedContent, streamContent: accumulatedContent }
-                    : msg
-                ));
+                streamState.content += chunk.choices[0].delta.content;
+                syncStreamContent(streamState.content, false);
               }
             }
 
-            // 流结束，更新最终状态
-            const finalConversation = conversationWithPlaceholder.map(msg => 
-              msg.id === assistantMessage.id 
-                ? { ...msg, content: accumulatedContent, isStreaming: false, streamContent: undefined }
-                : msg
-            );
-            setConversation(finalConversation);
+            // 流结束，转换状态机为完成状态
+            updateMessageState('completing', undefined, 'stream_completed');
             
-            // 保存到存储
-            if (currentConversationId) {
-              updateCurrentConversationMessages(finalConversation);
-            }
+            // 最终同步状态
+            syncStreamContent(streamState.content, true);
+            
+            // 等待最后一次UI更新完成后保存并重置状态
+            setTimeout(() => {
+              if (currentConversationId) {
+                const finalConversation = conversationWithPlaceholder.map(msg => 
+                  msg.id === assistantMessage.id 
+                    ? { ...msg, content: streamState.content, isStreaming: false, streamContent: undefined }
+                    : msg
+                );
+                updateCurrentConversationMessages(finalConversation);
+              }
+              // 重置状态机为空闲状态
+              updateMessageState('idle', {}, 'message_completed');
+            }, 0);
+            
           } catch (streamError: any) {
             console.error('流式传输错误:', streamError);
             
-            // 如果是用户中止，只更新状态，不删除消息
-            if (streamError.name === 'AbortError' || controller.signal.aborted) {
-              const partialConversation = conversationWithPlaceholder.map(msg => 
-                msg.id === assistantMessage.id 
-                  ? { ...msg, content: accumulatedContent || msg.streamContent || msg.content, isStreaming: false, streamContent: undefined }
-                  : msg
-              );
-              setConversation(partialConversation);
-              
-              // 保存到存储
-              if (currentConversationId) {
-                updateCurrentConversationMessages(partialConversation);
+            // 设置状态机为错误状态
+            updateMessageState('error', undefined, `stream_error: ${streamError.name || 'unknown'}`);
+            
+            // 统一的异常恢复处理
+            const finalContent = streamState.content || assistantMessage.content;
+            
+            try {
+              // 如果是用户中止，保存当前内容
+              if (streamError.name === 'AbortError' || controller.signal.aborted) {
+                syncStreamContent(finalContent, true);
+                
+                // 异步保存部分内容并恢复状态
+                setTimeout(() => {
+                  try {
+                    if (currentConversationId) {
+                      const partialConversation = conversationWithPlaceholder.map(msg => 
+                        msg.id === assistantMessage.id 
+                          ? { ...msg, content: finalContent, isStreaming: false, streamContent: undefined }
+                          : msg
+                      );
+                      updateCurrentConversationMessages(partialConversation);
+                    }
+                  } catch (saveError) {
+                    console.error('保存部分内容失败:', saveError);
+                  } finally {
+                    // 确保状态机重置
+                    updateMessageState('idle', {}, 'error_recovery_completed');
+                  }
+                }, 0);
+              } else {
+                // 其他错误时，清理状态并移除占位消息
+                setConversation(prev => prev.filter(msg => msg.id !== assistantMessage.id));
+                updateMessageState('idle', {}, 'error_cleanup_completed');
+                throw streamError;
               }
-            } else {
-              // 其他错误时，移除占位消息
+            } catch (recoveryError) {
+              // 恢复过程中的错误处理
+              console.error('异常恢复失败:', recoveryError);
+              updateMessageState('idle', {}, 'recovery_failed');
+              // 确保清理状态
               setConversation(prev => prev.filter(msg => msg.id !== assistantMessage.id));
               throw streamError;
             }
           } finally {
-            setAbortController(null);
+            // 统一清理资源
+            try {
+              // 清理控制器
+              setAbortController(null);
+              // 清理待定的更新
+              if (streamState.pendingTimeout) {
+                clearTimeout(streamState.pendingTimeout);
+                streamState.pendingTimeout = null;
+              }
+              // 确保最后一次更新完成
+              syncStreamContent(streamState.content, true);
+            } catch (cleanupError) {
+              console.error('资源清理失败:', cleanupError);
+            }
           }
         } else {
           // 非流式响应
@@ -730,6 +915,8 @@ export default function AIChatPage() {
       console.error('Chat error:', err);
     } finally {
       setIsLoading(false);
+      // 重置状态机到空闲状态，允许状态同步
+      updateMessageState('idle', {}, 'operation_completed');
     }
   };
 

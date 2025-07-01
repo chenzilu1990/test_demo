@@ -1,6 +1,6 @@
 # AI LLM Providers Research Platform
 
-> 🚀 **Version 0.4.1** - A unified interface for testing and comparing multiple AI/LLM providers with advanced context management features.
+> 🚀 **Version 0.7.0** - A unified interface for testing and comparing multiple AI/LLM providers with advanced context management and optimized streaming performance.
 
 ## 🌟 Features
 
@@ -16,11 +16,11 @@
 - **📊 Real-time Token Tracking**: Monitor context usage and optimization
 - **🔍 Smart Context Boundaries**: Automatic detection and visualization of context limits
 
-### Latest Enhancements (v0.4.1)
-- **🐛 Fixed Context Panel Following**: Precise mouse tracking with intelligent positioning
-- **⚡ Performance Optimizations**: 60fps updates with memory leak prevention
-- **🎨 Enhanced Visual Experience**: Smooth animations and responsive design
-- **🛡️ Robust Boundary Detection**: Dual-layer edge detection for optimal panel placement
+### Latest Enhancements (v0.7.0)
+- **🚀 Smart Streaming Optimization**: Intelligent rendering strategy for improved performance
+- **🎯 Message State Machine**: Reliable state management preventing race conditions
+- **📊 Performance Monitoring**: Real-time content analysis for optimal rendering decisions
+- **🔄 Enhanced Sync Protection**: State machine-based protection against state overwrites
 
 ## 🚀 Quick Start
 
@@ -114,16 +114,21 @@ The platform provides sophisticated context window management:
 
 ## 🧪 Recent Updates
 
-### v0.4.1 (2025-06-25)
-- **Major Bug Fixes**: Resolved context panel positioning issues
-- **Improved Accuracy**: Fixed coordinate system conflicts
-- **Enhanced Performance**: Added intelligent debouncing and memory management
-- **Better UX**: Smoother animations and responsive behavior
+### v0.7.0 (2025-07-01)
+- **Smart Streaming Optimization**: Intelligent markdown rendering with performance boost
+- **Message State Machine**: Robust state management for streaming messages
+- **Performance Monitoring**: Real-time analysis of content complexity
+- **Enhanced Reliability**: State sync protection during active operations
 
-### v0.4.0 (2025-06-25)
-- **Context-Aware Scrollbar**: Revolutionary new feature for context visualization
-- **Memory Spotlight**: Enhanced message visibility system
-- **Visual Improvements**: Transparent window design with masked overlays
+### v0.6.0 (2025-06-26)
+- **Context-History Separation**: Complete separation of chat history and AI context
+- **ID-based Context Management**: Efficient context management using message IDs
+- **Auto Migration**: Seamless migration of legacy data formats
+
+### v0.5.0 (2025-06-26)
+- **Smart Context Cleanup**: Multiple cleanup strategies with preview
+- **Cleanup Recommendations**: AI-powered strategy suggestions
+- **Enhanced UI**: Beautiful context management interface
 
 ## 🤝 Contributing
 

@@ -25,9 +25,31 @@ const ContextAwareScrollbar: React.FC<ContextAwareScrollbarProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [scrollPercentage, setScrollPercentage] = useState(currentScrollPercentage);
   const [mousePosition, setMousePosition] = useState<{ y: number; percentage: number } | null>(null);
+  const [lastContextBoundary, setLastContextBoundary] = useState(contextBoundary);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 监听 contextBoundary 变化，强制重新渲染
+  useEffect(() => {
+    if (lastContextBoundary !== contextBoundary) {
+      setLastContextBoundary(contextBoundary);
+      // 如果上下文边界发生变化，清除鼠标位置以触发重新计算
+      if (mousePosition) {
+        setMousePosition(null);
+        // 延迟一帧后重新设置，确保渲染更新
+        requestAnimationFrame(() => {
+          if (isHovered && scrollbarRef.current) {
+            // 模拟鼠标位置重新设置，触发信息面板更新
+            const rect = scrollbarRef.current.getBoundingClientRect();
+            const centerY = rect.height / 2;
+            const percentage = 50; // 默认设置到中间位置
+            setMousePosition({ y: centerY, percentage });
+          }
+        });
+      }
+    }
+  }, [contextBoundary, lastContextBoundary, mousePosition, isHovered]);
 
   // 监听滚动位置变化
   useEffect(() => {

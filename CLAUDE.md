@@ -138,3 +138,12 @@ interface BracketParameterOptions {
 
 - **Release Management**:
   - 确保程序正常运行，正常运行后，更新版本号、Changelog，提交commit
+
+## Claude Interaction Guidelines
+
+- 总是使用中文回复
+
+## 项目设计准则
+- 聚焦核心功能： “我们希望用户能将注意力完全集中在核心任务上，例如内容创作或数据分析。过于复杂的UI会分散用户的注意力，降低操作效率。”
+
+- 降低认知负荷： “少即是多意味着每个页面上的元素都经过深思熟虑。更少的选项、更清晰的布局，能帮助用户更快地理解和上手，降低学习成本。”

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useEffect, useState, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -12,10 +12,18 @@ interface MarkdownRendererProps {
   content: string;
   className?: string;
   isUser?: boolean;
+  isStreaming?: boolean;
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(({ content, className = '', isUser = false }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(({ 
+  content, 
+  className = '', 
+  isUser = false,
+  isStreaming = false 
+}) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const lastRenderedContentRef = useRef('');
+  const [shouldUseFullRender, setShouldUseFullRender] = useState(false);
 
   useEffect(() => {
     // 检测暗色模式
@@ -35,15 +43,65 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(({ content, class
     return () => observer.disconnect();
   }, []);
 
+  // 智能渲染策略：流式传输时延迟复杂解析
+  const renderContent = useMemo(() => {
+    if (isUser) {
+      // 用户消息不解析 Markdown，直接显示纯文本
+      return content;
+    }
+
+    // 检查内容变化和复杂度
+    const contentLength = content.length;
+    const hasComplexMarkdown = /```|`|#{1,6}\s|\*\*|\*[^*]|\[.*\]\(.*\)|\|/.test(content);
+    const isSignificantChange = Math.abs(contentLength - lastRenderedContentRef.current.length) > 100;
+    
+    // 流式传输优化策略
+    if (isStreaming) {
+      // 如果内容很短或没有复杂Markdown，立即渲染
+      if (contentLength < 200 || !hasComplexMarkdown) {
+        lastRenderedContentRef.current = content;
+        return content;
+      }
+      
+      // 对于长内容或复杂Markdown，延迟完整解析
+      if (!shouldUseFullRender && (contentLength > 1000 || isSignificantChange)) {
+        // 显示纯文本版本以提供即时反馈
+        return content;
+      }
+    }
+    
+    // 非流式或达到渲染阈值时，使用完整Markdown解析
+    lastRenderedContentRef.current = content;
+    setShouldUseFullRender(true);
+    return content;
+  }, [content, isUser, isStreaming, shouldUseFullRender]);
+
+  // 当流式传输结束时，强制完整渲染
+  useEffect(() => {
+    if (!isStreaming && content !== lastRenderedContentRef.current) {
+      setShouldUseFullRender(true);
+      lastRenderedContentRef.current = content;
+    }
+  }, [isStreaming, content]);
+
   // 配置语法高亮选项
   const highlightOptions: HighlightOptions = {
     detect: true, // 自动检测语言
     plainText: ['txt', 'text'], // 纯文本语言
   };
 
-  // 用户消息不解析 Markdown，直接显示纯文本
+  // 用户消息直接显示纯文本
   if (isUser) {
-    return <div className="whitespace-pre-wrap break-words">{content}</div>;
+    return <div className="whitespace-pre-wrap break-words">{renderContent}</div>;
+  }
+
+  // 流式传输时的简化渲染
+  if (isStreaming && !shouldUseFullRender) {
+    return (
+      <div className="whitespace-pre-wrap break-words">
+        {renderContent}
+      </div>
+    );
   }
 
   return (

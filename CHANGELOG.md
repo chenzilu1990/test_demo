@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-07-01
+
+### Added
+- 🚀 **智能流式渲染优化** - MarkdownRenderer 新增智能渲染策略，流式传输时延迟复杂解析
+- 🎯 **消息状态机机制** - 引入消息状态机管理，解决流式传输中的竞态条件和状态覆盖问题
+- 📊 **渲染性能监控** - 新增内容变化检测和复杂度分析，智能决定渲染时机
+- 🔄 **状态同步防护** - 基于状态机的防护机制，避免活跃操作期间的状态覆盖
+
+### Improved
+- **流式传输性能提升** - 短内容和简单文本立即渲染，长内容延迟完整解析
+- **用户体验优化** - 流式传输时提供即时文本反馈，完成后自动切换到完整渲染
+- **状态管理增强** - 更可靠的消息状态跟踪，防止消息丢失或重复
+- **内存使用优化** - 使用 useRef 缓存上次渲染内容，减少不必要的重新计算
+
+### Technical Details
+- MarkdownRenderer 组件新增 `isStreaming` 属性和智能渲染策略
+- 实现基于内容长度、复杂度和变化量的渲染决策算法
+- 引入 MessageState 类型定义和 updateMessageState 状态转换函数
+- 优化 useEffect 同步逻辑，添加流式消息检测和保留机制
+
 ## [0.6.0] - 2025-06-26
 
 ### Added

@@ -50,6 +50,15 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
     contextWindowTokens
   });
 
+  // 监听上下文消息变化，确保UI立即更新
+  useEffect(() => {
+    // 当上下文消息发生变化时，强制触发重新渲染
+    if (contextMessages.length === 0 && allMessages.length > 0) {
+      // 上下文被清空的情况，确保滚动条等组件能感知到变化
+      console.log('Context cleared, triggering UI update');
+    }
+  }, [contextMessages.length, allMessages.length]);
+
   const handleSaveTemplate = useCallback((content: string) => {
     onSaveTemplate?.(content);
   }, [onSaveTemplate]);
@@ -107,11 +116,13 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
       >
         <div
           className={`relative max-w-[85%] rounded-2xl px-4 py-3 shadow-sm transition-all duration-300 ${
+            msg.isStreaming ? 'animate-pulse' : ''
+          } ${
             isUser
               ? `bg-blue-500 text-white rounded-br-sm ${isInactive ? 'bg-opacity-60' : ''}`
               : `bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-bl-sm ${
                   isInactive ? 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700' : ''
-                }`
+                } ${msg.isStreaming ? 'border-blue-200 dark:border-blue-600 shadow-md' : ''}`
           }`}
         >
           {/* 消息头部信息 */}
@@ -133,10 +144,16 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
             <MarkdownRenderer 
               content={msg.isStreaming && msg.streamContent !== undefined ? msg.streamContent : msg.content} 
               isUser={isUser}
+              isStreaming={msg.isStreaming}
               className={isUser ? '' : 'prose-sm dark:prose-invert max-w-none'}
             />
             {msg.isStreaming && (
-              <span className="inline-block ml-1 animate-pulse">▋</span>
+              <span className="inline-block ml-1">
+                <span className="animate-pulse text-blue-500 dark:text-blue-400 font-bold text-lg">▋</span>
+                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 animate-pulse">
+                  正在输入...
+                </span>
+              </span>
             )}
             
             {/* 图片内容 */}
@@ -376,6 +393,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
         {/* 上下文感知滚动条 */}
         {allMessages.length > 0 && (
           <ContextAwareScrollbar
+            key={`scrollbar-${contextMessages.length}-${allMessages.length}`} // 使用key确保在上下文变化时重新渲染
             messages={allMessages}
             scrollContainerRef={scrollContainerRef}
             contextBoundary={contextBoundary}

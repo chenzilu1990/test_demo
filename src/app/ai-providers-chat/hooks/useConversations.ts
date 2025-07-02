@@ -267,7 +267,7 @@ export function useConversations(): UseConversationsReturn {
         setCurrentConversation({
           ...currentConversation,
           messages,
-          contextMessageIds: messages.map(msg => msg.id), // 同步更新contextMessageIds
+          // 保持原有的 contextMessageIds，不自动重置
           updatedAt: new Date()
         });
       }

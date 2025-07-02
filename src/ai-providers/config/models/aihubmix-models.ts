@@ -7,7 +7,7 @@ const aihubmixModels: ModelCard[] = [
     name: 'gpt-4.1-nano',
     description: 'OpenAI的最新多模态模型，支持视觉和文本输入，高性能通用AI助手',
     capabilities: {
-      contextWindowTokens: 128000,
+      contextWindowTokens: 4000,
       functionCall: true,
       vision: true,
       reasoning: true,

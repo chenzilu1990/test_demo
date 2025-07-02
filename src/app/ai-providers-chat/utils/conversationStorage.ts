@@ -172,8 +172,21 @@ export function updateConversationMessages(conversationId: string, messages: Con
     
     if (conversation) {
       conversation.messages = messages;
-      // 自动更新contextMessageIds，保持同步
-      conversation.contextMessageIds = messages.map(msg => msg.id);
+      
+      // 如果 contextMessageIds 为空或不存在，初始化为所有消息的 ID
+      if (!conversation.contextMessageIds || conversation.contextMessageIds.length === 0) {
+        conversation.contextMessageIds = messages.map(msg => msg.id);
+      } else {
+        // 验证并清理无效的消息 ID
+        const messageIdSet = new Set(messages.map(msg => msg.id));
+        conversation.contextMessageIds = conversation.contextMessageIds.filter(id => messageIdSet.has(id));
+        
+        // 如果清理后为空，重新初始化
+        if (conversation.contextMessageIds.length === 0 && messages.length > 0) {
+          conversation.contextMessageIds = messages.map(msg => msg.id);
+        }
+      }
+      
       conversation.updatedAt = new Date();
       
       // 如果是第一条用户消息，自动生成标题

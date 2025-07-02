@@ -941,9 +941,10 @@ export default function AIChatPage() {
   };
 
   // 计算上下文使用情况
-  const contextMessages = currentConversation ? getCurrentContextMessages() : [];
+  // 获取所有消息
+  const allMessages = currentConversation ? currentConversation.messages : [];
   const { utilizationRate } = useContextCalculation({
-    messages: contextMessages,
+    messages: allMessages,
     contextWindowTokens: getCurrentModelContextWindow()
   });
 
@@ -1250,7 +1251,7 @@ export default function AIChatPage() {
       {/* 主要内容区域 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* 对话区域 - 占据大部分空间 */}
-        <div className="flex-1 p-4 min-h-0">
+        <div className="flex-1 p-0 min-h-0">
           <ChatDialog
             conversation={currentConversation}
             error={error}

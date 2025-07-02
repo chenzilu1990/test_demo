@@ -14,6 +14,8 @@ interface UseContextCalculationProps {
   fadingZoneRatio?: number; // 淡出区域占总上下文的比例，默认0.15 (15%)
 }
 
+type ContextIndicatorStatus = 'safe' | 'warning' | 'critical';
+
 interface ContextCalculationResult {
   processedMessages: ConversationMessage[];
   totalTokens: number;
@@ -26,6 +28,15 @@ interface ContextCalculationResult {
     startPercentage: number; // 开始位置的百分比
     endPercentage: number; // 结束位置的百分比
   } | null;
+  cutoffInfo: {
+    cutoffIndex: number; // 临界消息的索引，-1 表示所有消息都在上下文中
+    cutoffMessageId: string | null; // 临界消息的 ID
+    isAllInContext: boolean; // 是否所有消息都在上下文中
+    tokensAtCutoff: number; // 到临界消息为止的 token 总数
+  };
+  contextIndicatorStatus: ContextIndicatorStatus; // 上下文指示区的状态
+  
+
 }
 
 export const useContextCalculation = ({
@@ -43,7 +54,15 @@ export const useContextCalculation = ({
         activeTokens: 0,
         utilizationRate: 0,
         remainingTokens: contextWindowTokens,
-        contextBoundary: null
+        contextBoundary: null,
+        cutoffInfo: {
+          cutoffIndex: -1,
+          cutoffMessageId: null,
+          isAllInContext: true,
+          tokensAtCutoff: 0
+        },
+        contextIndicatorStatus: 'safe' as ContextIndicatorStatus,
+
       };
     }
 
@@ -53,7 +72,31 @@ export const useContextCalculation = ({
       estimatedTokens: estimateTokens(msg.isStreaming && msg.streamContent ? msg.streamContent : msg.content)
     }));
 
-    // 从最新消息开始累计token
+    // 第一步：找到临界消息（从最新消息向最老消息遍历）
+    let accumulatedTokens = 0;
+    let cutoffIndex = -1;
+    let cutoffMessageId: string | null = null;
+    let tokensAtCutoff = 0;
+    
+    // 从最后一条消息（最新）开始向前遍历
+    for (let i = messagesWithTokens.length - 1; i >= 0; i--) {
+      const msg = messagesWithTokens[i];
+      const msgTokens = msg.estimatedTokens;
+      
+      // 如果加上这条消息会超过上下文窗口
+      if (accumulatedTokens + msgTokens > contextWindowTokens) {
+        cutoffIndex = i;
+        cutoffMessageId = msg.id;
+        tokensAtCutoff = accumulatedTokens;
+        break;
+      }
+      
+      accumulatedTokens += msgTokens;
+    }
+    
+    const isAllInContext = cutoffIndex === -1;
+
+    // 从最新消息开始累计token（用于原有的处理逻辑）
     let cumulativeTokens = 0;
     const fadingZoneTokens = contextWindowTokens * fadingZoneRatio;
     const activeZoneTokens = contextWindowTokens - fadingZoneTokens;
@@ -105,6 +148,11 @@ export const useContextCalculation = ({
     const utilizationRate = Math.round((activeTokens / contextWindowTokens) * 100);
     const remainingTokens = Math.max(0, contextWindowTokens - totalTokens);
 
+    // 计算上下文指示区状态
+    const contextIndicatorStatus: ContextIndicatorStatus = 
+      utilizationRate >= 100 ? 'critical' :
+      utilizationRate >= 90 ? 'warning' : 'safe';
+
     // 计算上下文边界
     let contextBoundary = null;
     if (processedMessages.length > 0) {
@@ -139,7 +187,15 @@ export const useContextCalculation = ({
       activeTokens,
       utilizationRate,
       remainingTokens,
-      contextBoundary
+      contextBoundary,
+      cutoffInfo: {
+        cutoffIndex,
+        cutoffMessageId,
+        isAllInContext,
+        tokensAtCutoff
+      },
+      contextIndicatorStatus,
+
     };
   }, [messages, contextWindowTokens, fadingZoneRatio]);
 };

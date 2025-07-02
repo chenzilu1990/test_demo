@@ -17,7 +17,8 @@
       "Bash(git commit:*)",
       "Bash(grep:*)",
       "Bash(ls:*)",
-      "Bash(timeout 10s npm run dev)"
+      "Bash(timeout 10s npm run dev)",
+      "Bash(echo:*)"
     ],
     "deny": []
   }

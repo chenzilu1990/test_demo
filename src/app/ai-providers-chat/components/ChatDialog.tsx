@@ -1,10 +1,10 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from 'react';
 import { ConversationMessage, Conversation } from './types';
-import { getContextMessages, isMessageInContext } from '../utils/contextManager';
 import MarkdownRenderer from './MarkdownRenderer';
 import ContextIndicator from './ContextIndicator';
-import ContextAwareScrollbar from './ContextAwareScrollbar';
+import ContextAwareScrollbar3 from './ContextAwareScrollbar3';
 import { useContextCalculation } from './useContextCalculation';
+import { useMessagePositions } from './useMessagePositions';
 import './markdown-styles.css';
 
 interface ChatDialogProps {
@@ -33,8 +33,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
 
-  // 获取上下文消息和处理消息
-  const contextMessages = conversation ? getContextMessages(conversation) : [];
+  // 获取所有消息
   const allMessages = conversation ? conversation.messages : [];
   
   // 上下文计算
@@ -44,20 +43,37 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
     activeTokens,
     utilizationRate,
     remainingTokens,
-    contextBoundary
+    contextBoundary,
+    cutoffInfo,
+    contextIndicatorStatus,
+
   } = useContextCalculation({
-    messages: contextMessages,
+    messages: allMessages,
     contextWindowTokens
   });
 
-  // 监听上下文消息变化，确保UI立即更新
+  // 获取上下文消息ID
+  const contextsIds = conversation?.contextMessageIds || [];
+  
+  const {
+    messagePositions,
+    setMessageRef,
+    updatePositions,
+    contextLengthTopOffset,
+    contextTopOffset
+  } = useMessagePositions({
+    messages: allMessages,
+    scrollContainerRef,
+    cutoffMessageId: cutoffInfo.cutoffMessageId,
+    contextsIds
+  });
+
+  // 监听上下文消息ID变化
   useEffect(() => {
-    // 当上下文消息发生变化时，强制触发重新渲染
-    if (contextMessages.length === 0 && allMessages.length > 0) {
-      // 上下文被清空的情况，确保滚动条等组件能感知到变化
-      console.log('Context cleared, triggering UI update');
+    if (contextsIds.length === 0 && allMessages.length > 0) {
+      // Context cleared, triggering UI update
     }
-  }, [contextMessages.length, allMessages.length]);
+  }, [contextsIds.length, allMessages.length]);
 
   const handleSaveTemplate = useCallback((content: string) => {
     onSaveTemplate?.(content);
@@ -74,7 +90,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
   // 自动滚动到底部
   const scrollToBottom = useCallback(() => {
     if (isAutoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      // messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [isAutoScroll]);
 
@@ -83,12 +99,6 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
     scrollToBottom();
   }, [allMessages.length, scrollToBottom]);
 
-  // 监听滚动事件，判断是否需要自动滚动
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    setIsAutoScroll(isAtBottom);
-  }, []);
 
   const copyToClipboard = useCallback(async (text: string) => {
     try {
@@ -109,6 +119,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
     return (
       <div
         key={msg.id}
+        ref={(el) => setMessageRef(msg.id, el)}
         className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 transition-all duration-300`}
         style={{ opacity }}
         onMouseEnter={() => setHoveredMessageId(msg.id)}
@@ -204,7 +215,6 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
                 <button
                   onClick={() => {
                     // 这里可以触发重新生成的逻辑
-                    console.log('重新生成回复');
                   }}
                   className="p-1 bg-black bg-opacity-20 text-gray-700 dark:text-gray-300 hover:bg-opacity-30 rounded-full transition-all"
                   title="重新生成回复"
@@ -236,10 +246,10 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
         </div>
       </div>
     );
-  }, [hoveredMessageId, onSaveTemplate, handleSaveTemplate, formatTime, copyToClipboard]);
+  }, [hoveredMessageId, onSaveTemplate, handleSaveTemplate, formatTime, copyToClipboard, setMessageRef]);
 
   return (
-    <div className="h-full bg-gray-50 dark:bg-gray-900 rounded-xl shadow-inner overflow-hidden flex flex-col">
+    <div className="h-full bg-gray-50 dark:bg-gray-900  shadow-inner overflow-hidden flex flex-col">
       {/* 上下文状态指示器 */}
       {allMessages.length > 0 && (
         <ContextIndicator
@@ -254,12 +264,22 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
       )}
       
       {/* 对话内容区域 */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 p-0 relative overflow-hidden">
+        {/* 滚动容器 */}
         <div
           ref={scrollContainerRef}
-          className="h-full overflow-y-auto p-6 space-y-4 scrollbar-hide"
-          onScroll={handleScroll}
+          className="h-full overflow-y-auto p-4"
         >
+
+        {/* 最简单的滚动条 */}
+        {allMessages.length > 0 && (
+          <ContextAwareScrollbar3
+            scrollContainerRef={scrollContainerRef}
+            contextTopOffset = {contextTopOffset}
+            contextLengthTopOffset = {contextLengthTopOffset}
+          />
+        )}
+
         {hasAvailableModels && allMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mb-6 shadow-lg">
@@ -324,19 +344,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
           </div>
         ) : (
           <>
-            {allMessages.map(msg => {
-              const inContext = conversation ? isMessageInContext(conversation, msg.id) : false;
-              const contextMsg = inContext ? processedMessages.find(p => p.id === msg.id) : null;
-              return renderMessage({
-                ...msg,
-                contextInfo: contextMsg?.contextInfo || {
-                  status: 'inactive',
-                  opacity: 0.6,
-                  tokenCount: 0,
-                  distanceFromWindow: 0
-                }
-              });
-            })}
+            {processedMessages.map(msg => renderMessage(msg))}
             <div ref={messagesEndRef} />
           </>
         )}
@@ -390,15 +398,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
         )}
         </div>
         
-        {/* 上下文感知滚动条 */}
-        {allMessages.length > 0 && (
-          <ContextAwareScrollbar
-            key={`scrollbar-${contextMessages.length}-${allMessages.length}`} // 使用key确保在上下文变化时重新渲染
-            messages={allMessages}
-            scrollContainerRef={scrollContainerRef}
-            contextBoundary={contextBoundary}
-          />
-        )}
+
       </div>
 
       {/* 错误提示区域 */}
@@ -451,35 +451,7 @@ const ChatDialog: React.FC<ChatDialogProps> = memo(({
         </div>
       )}
 
-      {/* 底部状态栏 */}
-      {/* {conversation.length > 0 && (
-        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-2">
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>{conversation.length} 条消息</span>
-            {!isAutoScroll && (
-              <button
-                onClick={scrollToBottom}
-                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-              >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-                滚动到底部
-              </button>
-            )}
-          </div>
-        </div>
-      )} */}
+
     </div>
   );
 });

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2025-07-02
+
+### Fixed
+- 🐛 **修复上下文状态显示问题** - 解决了消息 isInactive 状态判断不一致的问题
+- 🔧 **统一上下文状态管理** - 移除了双重上下文判断系统，完全基于 token 计算确定消息状态
+
+### Improved
+- **代码简化** - 简化了 ChatDialog 组件的消息渲染逻辑，提高可维护性
+- **性能优化** - 移除了冗余的状态计算和查找操作
+- **准确性提升** - 消息状态现在准确反映其在 AI 上下文窗口中的实际位置
+
+### Technical Details
+- 重构 ChatDialog.tsx，直接使用 processedMessages 进行渲染
+- 移除 isMessageInContext 函数的导入和使用
+- 消息的 active/fading/inactive 状态完全基于 token 使用量计算
+
 ## [0.7.0] - 2025-07-01
 
 ### Added

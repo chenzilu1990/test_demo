@@ -1,6 +1,6 @@
 # AI LLM Providers Research Platform
 
-> 🚀 **Version 0.7.0** - A unified interface for testing and comparing multiple AI/LLM providers with advanced context management and optimized streaming performance.
+> 🚀 **Version 0.7.1** - A unified interface for testing and comparing multiple AI/LLM providers with advanced context management and optimized streaming performance.
 
 ## 🌟 Features
 
@@ -16,7 +16,11 @@
 - **📊 Real-time Token Tracking**: Monitor context usage and optimization
 - **🔍 Smart Context Boundaries**: Automatic detection and visualization of context limits
 
-### Latest Enhancements (v0.7.0)
+### Latest Enhancements (v0.7.1)
+- **🐛 Context State Fix**: Unified context state management based on token calculations
+- **🔧 Code Simplification**: Streamlined message rendering logic for better maintainability
+
+### Previous Release (v0.7.0)
 - **🚀 Smart Streaming Optimization**: Intelligent rendering strategy for improved performance
 - **🎯 Message State Machine**: Reliable state management preventing race conditions
 - **📊 Performance Monitoring**: Real-time content analysis for optimal rendering decisions
